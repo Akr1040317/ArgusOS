@@ -21,9 +21,10 @@ interface ThreadRowProps {
   thread: Thread
   isSelected: boolean
   onClick: () => void
+  isFocused?: boolean
 }
 
-export function ThreadRow({ thread, isSelected, onClick }: ThreadRowProps) {
+export function ThreadRow({ thread, isSelected, onClick, isFocused = false }: ThreadRowProps) {
   const timeAgo = thread.lastMessageAt
     ? formatDistanceToNow(new Date(thread.lastMessageAt), { addSuffix: true })
     : ""
@@ -57,7 +58,9 @@ export function ThreadRow({ thread, isSelected, onClick }: ThreadRowProps) {
       onClick={onClick}
       className={cn(
         "p-3 md:p-4 border-b border-border-0 cursor-pointer transition-colors",
-        isSelected ? "bg-accentBlue/10 border-l-2 border-l-accentBlue" : "hover:bg-bg1"
+        isSelected && "bg-accentBlue/10 border-l-2 border-l-accentBlue",
+        isFocused && !isSelected && "bg-accentBlue/5 border-l-2 border-l-accentBlue/50",
+        !isSelected && !isFocused && "hover:bg-bg1"
       )}
     >
       <div className="flex items-start justify-between gap-2 mb-2 min-w-0">

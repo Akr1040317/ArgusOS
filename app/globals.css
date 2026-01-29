@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* cmdk command palette styles */
+[cmdk-root] {
+  @apply bg-panel;
+}
+
+[cmdk-input] {
+  @apply text-text0 placeholder:text-text2;
+}
+
+[cmdk-item] {
+  @apply text-text0;
+}
+
+[cmdk-item][aria-selected="true"] {
+  @apply bg-accentBlue/20 text-accentBlue;
+}
+
+[cmdk-empty] {
+  @apply text-text2;
+}
+
 /* Email HTML content styling */
 .email-html-content {
   color: inherit;

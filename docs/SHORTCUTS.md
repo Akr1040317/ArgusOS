@@ -2,7 +2,7 @@
 
 Global:
 - Cmd+K: command palette
-- Cmd+1..7: tabs (Command Center, Inbox, Calendar, Tasks, Chat, Digests, Settings)
+- Cmd+1..5: tabs (Command Center, Inbox, Calendar, Chat, Settings)
 - Cmd+F: focus search
 - ?: shortcut overlay
 - Esc: close overlay/palette
@@ -18,7 +18,7 @@ Inbox:
 - L: label menu (later)
 
 Palette commands:
-- Go to Inbox/Calendar/Chat/Tasks/Digests/Settings
+- Go to Inbox/Calendar/Chat/Settings
 - Search threads…
 - Summarize current thread
 - Generate draft for current thread

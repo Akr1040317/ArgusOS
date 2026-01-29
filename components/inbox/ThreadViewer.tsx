@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { doc, collection, query, orderBy, onSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase/client"
 import { useAuthState } from "react-firebase-hooks/auth"
+import { useInboxShortcuts } from "@/lib/hooks/useInboxShortcuts"
 import { auth } from "@/lib/firebase/client"
 import { format } from "date-fns"
 import { Mail, User, Clock, Copy, RefreshCw, Loader2 } from "lucide-react"
@@ -62,6 +63,63 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
   const [selectedTone, setSelectedTone] = useState<string>("concise")
+
+  // Set up inbox shortcuts
+  const handleRegenerateDraft = async () => {
+    if (!user || !threadId || regenerating) return
+    setRegenerating(true)
+    try {
+      const token = await user.getIdToken()
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 35000)
+      const response = await fetch("/api/drafts/regenerate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          uid: user.uid,
+          threadId,
+          tone: selectedTone,
+        }),
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to regenerate draft")
+      }
+      const data = await response.json()
+      if (!data.success) {
+        throw new Error(data.error || "Failed to regenerate draft")
+      }
+    } catch (error: any) {
+      console.error("Error regenerating draft:", error)
+      if (error.name !== "AbortError") {
+        alert(`Error regenerating draft: ${error.message || "Unknown error"}`)
+      }
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  const handleCopyDraft = () => {
+    if (!thread?.draftReply) return
+    const draftText = `Subject: ${thread.draftReply.subject}\n\n${thread.draftReply.text}`
+    navigator.clipboard.writeText(draftText)
+  }
+
+  useInboxShortcuts({
+    onRegenerateDraft: thread?.draftState === "READY" ? handleRegenerateDraft : undefined,
+    onCopyDraft: thread?.draftReply ? handleCopyDraft : undefined,
+    onCycleTone: () => {
+      // Tone cycling is handled by setSelectedTone
+    },
+    draftText: thread?.draftReply?.text,
+    selectedTone,
+    setSelectedTone,
+  })
 
   useEffect(() => {
     if (!user || !threadId) {
@@ -422,9 +480,20 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
                 <span className="font-semibold">Subject: </span>
                 {thread.draftReply.subject}
               </div>
-              <div className="p-3 rounded-lg bg-bg1 border border-border-0 text-sm text-text1 whitespace-pre-wrap">
+              <div className="p-3 rounded-lg bg-bg1 border border-border-0 text-sm text-text1 whitespace-pre-wrap min-h-[100px]">
                 {thread.draftReply.text}
               </div>
+              <textarea
+                readOnly
+                value={thread.draftReply.text}
+                className="sr-only"
+                ref={(el) => {
+                  // Store ref for focus management (hidden textarea for keyboard shortcuts)
+                  if (el) {
+                    (window as any).__draftTextareaRef = el
+                  }
+                }}
+              />
             </div>
           </div>
         )}

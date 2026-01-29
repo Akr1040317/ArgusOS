@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { ThreadList } from "@/components/inbox/ThreadList"
 import { ThreadViewer } from "@/components/inbox/ThreadViewer"
 import { AccountFilter } from "@/components/inbox/AccountFilter"
@@ -10,7 +11,9 @@ import { cn } from "@/lib/utils"
 import { ResizablePanel, ResizableContainer } from "@/components/ui/resizable"
 
 export default function InboxPage() {
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const threadParam = searchParams.get("thread")
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(threadParam)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [showSidebar, setShowSidebar] = useState(true)
   const [showThreadList, setShowThreadList] = useState(true)
@@ -43,6 +46,15 @@ export default function InboxPage() {
       localStorage.setItem("inbox-threadlist-width", threadListWidth.toString())
     }
   }, [threadListWidth])
+
+  // Handle thread query parameter
+  useEffect(() => {
+    const threadParam = searchParams.get("thread")
+    if (threadParam && threadParam !== selectedThreadId) {
+      setSelectedThreadId(threadParam)
+      setShowThreadList(false) // Hide thread list when opening from link
+    }
+  }, [searchParams, selectedThreadId])
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col overflow-hidden">

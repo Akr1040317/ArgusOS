@@ -1,11 +1,14 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth } from "@/lib/firebase/client"
 import { Sidebar } from "@/components/shell/Sidebar"
 import { Topbar } from "@/components/shell/Topbar"
+import { CommandPalette } from "@/components/shell/CommandPalette"
+import { ShortcutOverlay } from "@/components/shell/ShortcutOverlay"
+import { useKeyboardShortcuts } from "@/lib/hooks/useKeyboardShortcuts"
 
 export default function DashboardLayout({
   children,
@@ -14,6 +17,19 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const [user, loading] = useAuthState(auth)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [shortcutOverlayOpen, setShortcutOverlayOpen] = useState(false)
+
+  // Set up keyboard shortcuts
+  useKeyboardShortcuts({
+    onCommandPaletteOpen: () => setCommandPaletteOpen(true),
+    onShortcutOverlayOpen: () => setShortcutOverlayOpen(true),
+    onSearchFocus: () => {
+      // Focus search input in topbar
+      const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement
+      searchInput?.focus()
+    },
+  })
 
   useEffect(() => {
     if (!loading && !user) {
@@ -37,9 +53,11 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-bg0">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Topbar />
+        <Topbar onCommandPaletteOpen={() => setCommandPaletteOpen(true)} />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
+      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+      <ShortcutOverlay open={shortcutOverlayOpen} onOpenChange={setShortcutOverlayOpen} />
     </div>
   )
 }

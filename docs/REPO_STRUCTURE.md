@@ -9,7 +9,6 @@ app/
   app/calendar/page.tsx
   app/tasks/page.tsx
   app/chat/page.tsx
-  app/digests/page.tsx
   app/settings/page.tsx
 
 components/

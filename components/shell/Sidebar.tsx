@@ -8,7 +8,6 @@ import {
   Calendar, 
   CheckSquare, 
   MessageSquare, 
-  FileText, 
   Settings 
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -19,7 +18,6 @@ const navigation = [
   { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
   { name: "Tasks", href: "/dashboard/tasks", icon: CheckSquare },
   { name: "Chat", href: "/dashboard/chat", icon: MessageSquare },
-  { name: "Digests", href: "/dashboard/digests", icon: FileText },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
 

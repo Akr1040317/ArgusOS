@@ -200,9 +200,9 @@ export function ChatInterface() {
 
   const handleAction = (action: { label: string; type: string; targetId: string | null }) => {
     if (action.type === "OPEN_THREAD" && action.targetId) {
-      window.open(`/dashboard/inbox?thread=${action.targetId}`, "_blank")
+      window.location.href = `/dashboard/inbox?thread=${action.targetId}`
     } else if (action.type === "OPEN_EVENT" && action.targetId) {
-      window.open(`/dashboard/calendar?event=${action.targetId}`, "_blank")
+      window.location.href = `/dashboard/calendar?event=${action.targetId}`
     }
     // Other actions can be implemented later
   }
@@ -388,7 +388,6 @@ export function ChatInterface() {
                               <Calendar className="h-3 w-3" />
                             )}
                             <span className="truncate">{source.reason}</span>
-                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
                           </Link>
                         ))}
                       </div>

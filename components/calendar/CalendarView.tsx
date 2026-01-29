@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth } from "@/lib/firebase/client"
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore"
@@ -34,12 +35,24 @@ interface CalendarEvent {
 }
 
 export function CalendarView() {
+  const searchParams = useSearchParams()
   const [user] = useAuthState(auth)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month")
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+
+  // Handle event query parameter
+  useEffect(() => {
+    const eventParam = searchParams.get("event")
+    if (eventParam && events.length > 0) {
+      const event = events.find((e) => e.id === eventParam)
+      if (event) {
+        setSelectedEvent(event)
+      }
+    }
+  }, [searchParams, events])
 
   useEffect(() => {
     if (!user) return

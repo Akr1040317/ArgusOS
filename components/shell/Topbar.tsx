@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { auth } from "@/lib/firebase/client"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Play, User } from "lucide-react"
+import { Search, Play, User, Command } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
-export function Topbar() {
+interface TopbarProps {
+  onCommandPaletteOpen?: () => void
+}
+
+export function Topbar({ onCommandPaletteOpen }: TopbarProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -40,11 +44,19 @@ export function Topbar() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text2" />
           <Input
             type="search"
-            placeholder="Search threads, events..."
+            placeholder="Search threads, events... (⌘K for commands)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 bg-bg1 border-border-0 text-text0 placeholder:text-text2"
           />
+          <button
+            onClick={() => onCommandPaletteOpen?.()}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5 px-2 py-1 rounded text-xs text-text2 hover:text-text0 hover:bg-bg1 border border-border-0"
+            title="Command Palette (⌘K)"
+          >
+            <Command className="h-3 w-3" />
+            <kbd className="hidden sm:inline font-mono">⌘K</kbd>
+          </button>
         </div>
       </div>
 
