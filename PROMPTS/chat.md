@@ -5,13 +5,19 @@ USER:
 Question: {question}
 
 Sources:
-Threads: {threads[] each has threadId, subject, summaryBullets, extractedAsk, status, priority, lastMessageAt}
-Events: {events[] each has eventId, title, startISO, prepPack, relatedThreadIds}
+Threads: {threads[]}
+Events: {events[]}
 
-Return JSON:
+Analyze the question and provide:
+1. A clear, helpful answer based on the provided sources
+2. Suggested actions the user might want to take (e.g., open a thread, view an event)
+3. The specific sources you used to answer the question
+
+Return JSON only:
 {
-  "answer": string,
+  "answer": string (your answer to the question),
   "actions": [{"label": string, "type": "OPEN_THREAD"|"OPEN_EVENT"|"GENERATE_DRAFT"|"RUN_AGENT"|"CREATE_FOLLOWUP", "targetId": string|null}],
-  "sources": [{"type":"thread"|"event", "id": string, "reason": string}]
+  "sources": [{"type":"thread"|"event", "id": string, "reason": string (why this source is relevant)}]
 }
-Output JSON only.
+
+Output JSON only, no other text.
