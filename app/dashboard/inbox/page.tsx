@@ -15,6 +15,7 @@ export default function InboxPage() {
   const threadParam = searchParams.get("thread")
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(threadParam)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
+  const [selectedSplit, setSelectedSplit] = useState<string | null>("all") // "all" | "VIP" | "NEEDS_REPLY" | "WAITING" | "FINANCE" | "HIRING" | "STARTUP" | "NEWSLETTERS" | "RECEIPTS" | "FYI" | "OTHER"
   const [showSidebar, setShowSidebar] = useState(true)
   const [showThreadList, setShowThreadList] = useState(true)
   
@@ -111,19 +112,43 @@ export default function InboxPage() {
               <AccountFilter selectedAccountId={selectedAccountId} onAccountChange={setSelectedAccountId} />
               <div className="p-4 border-t border-border-0">
                 <div className="space-y-1">
-                  <button className="w-full text-left px-3 py-2 rounded-lg bg-accentBlue/20 text-accentBlue font-medium text-sm">
+                  <button
+                    onClick={() => setSelectedSplit("all")}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-lg font-medium text-sm transition-colors",
+                      selectedSplit === "all"
+                        ? "bg-accentBlue/20 text-accentBlue"
+                        : "text-text2 hover:bg-bg1"
+                    )}
+                  >
                     All
                   </button>
-                  <div className="text-xs text-text2 mt-4 mb-2 px-3">Coming Soon</div>
-                  <button className="w-full text-left px-3 py-2 rounded-lg text-text2 hover:bg-bg1 text-sm" disabled>
-                    VIP
-                  </button>
-                  <button className="w-full text-left px-3 py-2 rounded-lg text-text2 hover:bg-bg1 text-sm" disabled>
-                    Needs Reply
-                  </button>
-                  <button className="w-full text-left px-3 py-2 rounded-lg text-text2 hover:bg-bg1 text-sm" disabled>
-                    Waiting on Them
-                  </button>
+                  <div className="text-xs text-text2 mt-4 mb-2 px-3">Splits</div>
+                  {[
+                    { value: "VIP", label: "VIP" },
+                    { value: "NEEDS_REPLY", label: "Needs Reply" },
+                    { value: "WAITING", label: "Waiting on Them" },
+                    { value: "FINANCE", label: "Finance" },
+                    { value: "HIRING", label: "Hiring" },
+                    { value: "STARTUP", label: "Startup" },
+                    { value: "NEWSLETTERS", label: "Newsletters" },
+                    { value: "RECEIPTS", label: "Receipts" },
+                    { value: "FYI", label: "FYI" },
+                    { value: "OTHER", label: "Other" },
+                  ].map((split) => (
+                    <button
+                      key={split.value}
+                      onClick={() => setSelectedSplit(split.value)}
+                      className={cn(
+                        "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
+                        selectedSplit === split.value
+                          ? "bg-accentBlue/20 text-accentBlue font-medium"
+                          : "text-text2 hover:bg-bg1"
+                      )}
+                    >
+                      {split.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -161,6 +186,7 @@ export default function InboxPage() {
               }} 
               selectedThreadId={selectedThreadId || undefined}
               accountIdFilter={selectedAccountId}
+              splitFilter={selectedSplit === "all" ? null : selectedSplit}
             />
           </ResizablePanel>
         ) : selectedThreadId ? (

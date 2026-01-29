@@ -23,9 +23,10 @@ interface ThreadListProps {
   onThreadSelect: (threadId: string) => void
   selectedThreadId?: string
   accountIdFilter?: string | null // null = all accounts
+  splitFilter?: string | null // null = all splits, otherwise filter by split value
 }
 
-export function ThreadList({ onThreadSelect, selectedThreadId, accountIdFilter }: ThreadListProps) {
+export function ThreadList({ onThreadSelect, selectedThreadId, accountIdFilter, splitFilter }: ThreadListProps) {
   const [user] = useAuthState(auth)
   const [threads, setThreads] = useState<Thread[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +51,20 @@ export function ThreadList({ onThreadSelect, selectedThreadId, accountIdFilter }
           threadData = threadData.filter((t) => t.accountId === accountIdFilter)
         }
         
+        // Filter by split if specified
+        if (splitFilter !== null && splitFilter !== undefined) {
+          if (splitFilter === "NEEDS_REPLY") {
+            // Filter by status for "Needs Reply"
+            threadData = threadData.filter((t) => t.status === "NEEDS_REPLY")
+          } else if (splitFilter === "WAITING") {
+            // Filter by status for "Waiting on Them"
+            threadData = threadData.filter((t) => t.status === "WAITING")
+          } else {
+            // Filter by split value for other splits
+            threadData = threadData.filter((t) => t.split === splitFilter)
+          }
+        }
+        
         setThreads(threadData)
         setLoading(false)
         
@@ -70,7 +85,7 @@ export function ThreadList({ onThreadSelect, selectedThreadId, accountIdFilter }
     )
 
     return () => unsubscribe()
-  }, [user, accountIdFilter, selectedThreadId])
+  }, [user, accountIdFilter, splitFilter, selectedThreadId])
 
   // J/K navigation
   useEffect(() => {

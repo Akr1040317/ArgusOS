@@ -63,6 +63,7 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
   const [selectedTone, setSelectedTone] = useState<string>("concise")
+  const [activeTab, setActiveTab] = useState<"summary" | "ask-actions" | "draft" | "raw">("summary")
 
   // Set up inbox shortcuts
   const handleRegenerateDraft = async () => {
@@ -167,6 +168,13 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
       unsubscribeMessages()
     }
   }, [user, threadId])
+  
+  // Reset to summary tab when thread changes
+  useEffect(() => {
+    if (threadId) {
+      setActiveTab("summary")
+    }
+  }, [threadId])
 
   if (!threadId) {
     return (
@@ -248,488 +256,432 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
         </div>
       </div>
 
-      {/* Scrollable Content Area - Summary + Messages */}
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-border-0 bg-bg1 px-2 flex-shrink-0">
+        <button
+          onClick={() => setActiveTab("summary")}
+          className={cn(
+            "px-3 py-2 text-sm font-medium transition-colors border-b-2",
+            activeTab === "summary"
+              ? "text-accentBlue border-accentBlue"
+              : "text-text2 border-transparent hover:text-text0"
+          )}
+        >
+          Summary
+        </button>
+        {(thread.extractedAsk || thread.tasks?.length > 0 || thread.deadlines?.length > 0) && (
+          <button
+            onClick={() => setActiveTab("ask-actions")}
+            className={cn(
+              "px-3 py-2 text-sm font-medium transition-colors border-b-2",
+              activeTab === "ask-actions"
+                ? "text-accentBlue border-accentBlue"
+                : "text-text2 border-transparent hover:text-text0"
+            )}
+          >
+            Ask & Actions
+          </button>
+        )}
+        <button
+          onClick={() => setActiveTab("draft")}
+          className={cn(
+            "px-3 py-2 text-sm font-medium transition-colors border-b-2",
+            activeTab === "draft"
+              ? "text-accentBlue border-accentBlue"
+              : "text-text2 border-transparent hover:text-text0"
+          )}
+        >
+          Draft
+        </button>
+        <button
+          onClick={() => setActiveTab("raw")}
+          className={cn(
+            "px-3 py-2 text-sm font-medium transition-colors border-b-2",
+            activeTab === "raw"
+              ? "text-accentBlue border-accentBlue"
+              : "text-text2 border-transparent hover:text-text0"
+          )}
+        >
+          Raw
+        </button>
+      </div>
+
+      {/* Scrollable Content Area - Tab Content */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        {/* Summary Section - Compact */}
-        {(thread.summaryBullets?.length > 0 || thread.extractedAsk || thread.openLoops?.length > 0 || thread.deadlines?.length > 0 || thread.tasks?.length > 0) && (
-          <div className="p-3 border-b border-border-0 bg-bg1">
-            <div className="space-y-2.5">
-              {thread.summaryBullets && thread.summaryBullets.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-text0 mb-1.5 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-accentBlue"></span>
-                    Summary
-                  </h3>
-                  <ul className="space-y-1 text-xs text-text1 ml-3">
-                    {thread.summaryBullets.map((bullet, idx) => (
-                      <li key={idx} className="flex items-start gap-1.5">
-                        <span className="text-accentBlue mt-1.5">•</span>
-                        <span>{bullet}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {thread.extractedAsk && (
-                <div>
-                  <h3 className="text-xs font-semibold text-text0 mb-1.5 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-accentPurple"></span>
-                    Ask
-                  </h3>
-                  <p className="text-xs text-text1 ml-3">{thread.extractedAsk}</p>
-                </div>
-              )}
+        {/* Summary Tab */}
+        {activeTab === "summary" && (
+          <div className="p-4 md:p-6 space-y-4">
+            {thread.summaryBullets && thread.summaryBullets.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-text0 mb-3 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accentBlue"></span>
+                  Summary
+                </h3>
+                <ul className="space-y-2 text-sm text-text1 ml-5">
+                  {thread.summaryBullets.map((bullet, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-accentBlue mt-1.5">•</span>
+                      <span>{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-              {thread.openLoops && thread.openLoops.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-text0 mb-1.5 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-orange-400"></span>
-                    Open Loops
-                  </h3>
-                  <ul className="space-y-1 text-xs text-text1 ml-3">
-                    {thread.openLoops.map((loop, idx) => (
-                      <li key={idx} className="flex items-start gap-1.5">
-                        <span className="text-orange-400 mt-1.5">•</span>
-                        <span>{loop}</span>
-                      </li>
-                    ))}
-                  </ul>
+            {thread.importanceReasons && thread.importanceReasons.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-text0 mb-3 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                  Why Important
+                </h3>
+                <div className="flex flex-wrap gap-2 ml-5">
+                  {thread.importanceReasons.map((reason, idx) => (
+                    <span key={idx} className="px-2 py-1 rounded text-sm bg-yellow-400/20 text-yellow-300 border border-yellow-400/30">
+                      {reason}
+                    </span>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              {thread.deadlines && thread.deadlines.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-text0 mb-1.5 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-red-400"></span>
-                    Deadlines
-                  </h3>
-                  <ul className="space-y-1 text-xs text-text1 ml-3">
-                    {thread.deadlines.map((deadline, idx) => (
+            {(!thread.summaryBullets || thread.summaryBullets.length === 0) && 
+             (!thread.importanceReasons || thread.importanceReasons.length === 0) && (
+              <div className="text-center text-text2 py-8">
+                <p>No summary available</p>
+                <p className="text-xs mt-2">AI summary will appear here once processed</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Ask & Actions Tab */}
+        {activeTab === "ask-actions" && (
+          <div className="p-4 md:p-6 space-y-4">
+            {thread.extractedAsk && (
+              <div>
+                <h3 className="text-sm font-semibold text-text0 mb-3 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accentPurple"></span>
+                  Extracted Ask
+                </h3>
+                <p className="text-sm text-text1 ml-5">{thread.extractedAsk}</p>
+              </div>
+            )}
+
+            {thread.openLoops && thread.openLoops.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-text0 mb-3 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                  Open Loops
+                </h3>
+                <ul className="space-y-2 text-sm text-text1 ml-5">
+                  {thread.openLoops.map((loop, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-orange-400 mt-1.5">•</span>
+                      <span>{loop}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {thread.deadlines && thread.deadlines.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-text0 mb-3 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                  Deadlines
+                </h3>
+                <ul className="space-y-2 text-sm text-text1 ml-5">
+                  {thread.deadlines.map((deadline, idx) => (
+                    <li key={idx} className="flex items-center gap-2 flex-wrap">
+                      <span className="text-red-400">•</span>
+                      <span>{deadline.label}</span>
+                      {deadline.dateISO && (
+                        <span className="px-2 py-0.5 rounded text-xs bg-red-400/20 text-red-300 border border-red-400/30">
+                          {format(new Date(deadline.dateISO), "MMM d, yyyy")}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {thread.tasks && thread.tasks.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-text0 mb-3 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                  Tasks
+                </h3>
+                <ul className="space-y-2 text-sm text-text1 ml-5">
+                  {thread.tasks.map((task, idx) => {
+                    const taskTypeColors: Record<string, string> = {
+                      REPLY: "bg-blue-400/20 text-blue-300 border-blue-400/30",
+                      FOLLOW_UP: "bg-purple-400/20 text-purple-300 border-purple-400/30",
+                      SEND_DOC: "bg-yellow-400/20 text-yellow-300 border-yellow-400/30",
+                      SCHEDULE: "bg-pink-400/20 text-pink-300 border-pink-400/30",
+                      REVIEW: "bg-cyan-400/20 text-cyan-300 border-cyan-400/30",
+                      PAY: "bg-green-400/20 text-green-300 border-green-400/30",
+                      DECIDE: "bg-orange-400/20 text-orange-300 border-orange-400/30",
+                      OTHER: "bg-gray-400/20 text-gray-300 border-gray-400/30",
+                    }
+                    const taskColor = taskTypeColors[task.type] || taskTypeColors.OTHER
+                    return (
                       <li key={idx} className="flex items-center gap-2 flex-wrap">
-                        <span className="text-red-400">•</span>
-                        <span>{deadline.label}</span>
-                        {deadline.dateISO && (
-                          <span className="px-1.5 py-0.5 rounded text-xs bg-red-400/20 text-red-300 border border-red-400/30">
-                            {format(new Date(deadline.dateISO), "MMM d, yyyy")}
+                        <span className="text-green-400">•</span>
+                        <span className={`px-2 py-0.5 rounded text-xs border ${taskColor}`}>
+                          {task.type}
+                        </span>
+                        <span>{task.label}</span>
+                        {task.dueISO && (
+                          <span className="px-2 py-0.5 rounded text-xs bg-red-400/20 text-red-300 border border-red-400/30">
+                            Due: {format(new Date(task.dueISO), "MMM d")}
                           </span>
                         )}
                       </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
 
-              {thread.tasks && thread.tasks.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-text0 mb-1.5 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-green-400"></span>
-                    Tasks
-                  </h3>
-                  <ul className="space-y-1 text-xs text-text1 ml-3">
-                    {thread.tasks.map((task, idx) => {
-                      const taskTypeColors: Record<string, string> = {
-                        REPLY: "bg-blue-400/20 text-blue-300 border-blue-400/30",
-                        FOLLOW_UP: "bg-purple-400/20 text-purple-300 border-purple-400/30",
-                        SEND_DOC: "bg-yellow-400/20 text-yellow-300 border-yellow-400/30",
-                        SCHEDULE: "bg-pink-400/20 text-pink-300 border-pink-400/30",
-                        REVIEW: "bg-cyan-400/20 text-cyan-300 border-cyan-400/30",
-                        PAY: "bg-green-400/20 text-green-300 border-green-400/30",
-                        DECIDE: "bg-orange-400/20 text-orange-300 border-orange-400/30",
-                        OTHER: "bg-gray-400/20 text-gray-300 border-gray-400/30",
-                      }
-                      const taskColor = taskTypeColors[task.type] || taskTypeColors.OTHER
-                      return (
-                        <li key={idx} className="flex items-center gap-2 flex-wrap">
-                          <span className="text-green-400">•</span>
-                          <span className={`px-1.5 py-0.5 rounded text-xs border ${taskColor}`}>
-                            {task.type}
-                          </span>
-                          <span>{task.label}</span>
-                          {task.dueISO && (
-                            <span className="px-1.5 py-0.5 rounded text-xs bg-red-400/20 text-red-300 border border-red-400/30">
-                              Due: {format(new Date(task.dueISO), "MMM d")}
-                            </span>
-                          )}
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              )}
+            {!thread.extractedAsk && 
+             (!thread.tasks || thread.tasks.length === 0) && 
+             (!thread.deadlines || thread.deadlines.length === 0) && 
+             (!thread.openLoops || thread.openLoops.length === 0) && (
+              <div className="text-center text-text2 py-8">
+                <p>No asks or actions extracted</p>
+                <p className="text-xs mt-2">AI will extract asks, tasks, and deadlines here</p>
+              </div>
+            )}
+          </div>
+        )}
 
-              {thread.importanceReasons && thread.importanceReasons.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-text0 mb-1.5 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-yellow-400"></span>
-                    Why Important
+        {/* Draft Tab */}
+        {activeTab === "draft" && (
+          <div className="p-4 md:p-6">
+            {thread.draftState === "READY" && thread.draftReply ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-text0 flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-accentBlue" />
+                    Draft Reply
                   </h3>
-                  <div className="flex flex-wrap gap-1.5 ml-3">
-                    {thread.importanceReasons.map((reason, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded text-xs bg-yellow-400/20 text-yellow-300 border border-yellow-400/30">
-                        {reason}
-                      </span>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedTone}
+                      onChange={(e) => setSelectedTone(e.target.value)}
+                      className="text-xs px-2 py-1 rounded bg-bg1 border border-border-0 text-text0"
+                      disabled={regenerating}
+                    >
+                      <option value="concise">Concise</option>
+                      <option value="warm">Warm</option>
+                      <option value="assertive">Assertive</option>
+                      <option value="formal">Formal</option>
+                    </select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRegenerateDraft}
+                      disabled={regenerating || thread.draftReply?.tone === selectedTone}
+                      className="h-7 text-xs"
+                    >
+                      {regenerating ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Regenerate
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyDraft}
+                      className="h-7 text-xs"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy
+                    </Button>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Draft Panel */}
-        {thread.draftState === "READY" && thread.draftReply && (
-          <div className="p-4 border-b border-border-0 bg-accentBlue/5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-text0 flex items-center gap-2">
-                <Mail className="h-4 w-4 text-accentBlue" />
-                Draft Reply
-              </h3>
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedTone}
-                  onChange={(e) => setSelectedTone(e.target.value)}
-                  className="text-xs px-2 py-1 rounded bg-bg1 border border-border-0 text-text0"
-                  disabled={regenerating}
-                >
-                  <option value="concise">Concise</option>
-                  <option value="warm">Warm</option>
-                  <option value="assertive">Assertive</option>
-                  <option value="formal">Formal</option>
-                </select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    if (!user || !threadId || regenerating) return
-                    setRegenerating(true)
-                    try {
-                      const token = await user.getIdToken()
-                      
-                      // Add timeout handling
-                      const controller = new AbortController()
-                      const timeoutId = setTimeout(() => controller.abort(), 35000) // 35 second timeout
-                      
-                      const response = await fetch("/api/drafts/regenerate", {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                          uid: user.uid,
-                          threadId,
-                          tone: selectedTone,
-                        }),
-                        signal: controller.signal,
-                      })
-                      
-                      clearTimeout(timeoutId)
-                      
-                      if (!response.ok) {
-                        const errorData = await response.json()
-                        throw new Error(errorData.error || "Failed to regenerate draft")
+                <div className="space-y-2">
+                  <div className="text-sm text-text2">
+                    <span className="font-semibold">Subject: </span>
+                    {thread.draftReply.subject}
+                  </div>
+                  <div className="p-4 rounded-lg bg-bg1 border border-border-0 text-sm text-text1 whitespace-pre-wrap min-h-[200px]">
+                    {thread.draftReply.text}
+                  </div>
+                  <textarea
+                    readOnly
+                    value={thread.draftReply.text}
+                    className="sr-only"
+                    ref={(el) => {
+                      if (el) {
+                        (window as any).__draftTextareaRef = el
                       }
-                      
-                      const data = await response.json()
-                      if (!data.success) {
-                        throw new Error(data.error || "Failed to regenerate draft")
-                      }
-                    } catch (error: any) {
-                      console.error("Error regenerating draft:", error)
-                      if (error.name === "AbortError") {
-                        alert("Draft generation timed out. Please try again.")
-                      } else {
-                        alert(`Error regenerating draft: ${error.message || "Unknown error"}`)
-                      }
-                    } finally {
-                      setRegenerating(false)
-                    }
-                  }}
-                  disabled={regenerating || thread.draftReply?.tone === selectedTone}
-                  className="h-7 text-xs"
-                >
-                  {regenerating ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      Regenerate
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const draftText = `Subject: ${thread.draftReply?.subject || ""}\n\n${thread.draftReply?.text || ""}`
-                    navigator.clipboard.writeText(draftText)
-                  }}
-                  className="h-7 text-xs"
-                >
-                  <Copy className="h-3 w-3 mr-1" />
-                  Copy
-                </Button>
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-xs text-text2">
-                <span className="font-semibold">Subject: </span>
-                {thread.draftReply.subject}
+            ) : (thread.draftState === "NONE" || !thread.draftState) && thread.status === "NEEDS_REPLY" ? (
+              <div className="space-y-4">
+                <div className="text-center py-8">
+                  <p className="text-text2 mb-4">No draft generated yet</p>
+                  <p className="text-xs text-text2 mb-4">Generate an AI draft reply for this thread</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <select
+                      value={selectedTone}
+                      onChange={(e) => setSelectedTone(e.target.value)}
+                      className="text-xs px-2 py-1 rounded bg-bg0 border border-border-0 text-text0"
+                      disabled={regenerating}
+                    >
+                      <option value="concise">Concise</option>
+                      <option value="warm">Warm</option>
+                      <option value="assertive">Assertive</option>
+                      <option value="formal">Formal</option>
+                    </select>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleRegenerateDraft}
+                      disabled={regenerating}
+                      className="h-7 text-xs bg-accentBlue hover:bg-accentBlue/90 text-bg0"
+                    >
+                      {regenerating ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="h-3 w-3 mr-1" />
+                          Generate Draft
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <div className="p-3 rounded-lg bg-bg1 border border-border-0 text-sm text-text1 whitespace-pre-wrap min-h-[100px]">
-                {thread.draftReply.text}
-              </div>
-              <textarea
-                readOnly
-                value={thread.draftReply.text}
-                className="sr-only"
-                ref={(el) => {
-                  // Store ref for focus management (hidden textarea for keyboard shortcuts)
-                  if (el) {
-                    (window as any).__draftTextareaRef = el
-                  }
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Generate Draft Button - Show when no draft exists */}
-        {(thread.draftState === "NONE" || !thread.draftState) && thread.status === "NEEDS_REPLY" && (
-          <div className="p-4 border-b border-border-0 bg-bg1">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-text0 mb-1">No draft generated yet</h3>
-                <p className="text-xs text-text2">Generate an AI draft reply for this thread</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedTone}
-                  onChange={(e) => setSelectedTone(e.target.value)}
-                  className="text-xs px-2 py-1 rounded bg-bg0 border border-border-0 text-text0"
-                  disabled={regenerating}
-                >
-                  <option value="concise">Concise</option>
-                  <option value="warm">Warm</option>
-                  <option value="assertive">Assertive</option>
-                  <option value="formal">Formal</option>
-                </select>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={async () => {
-                    if (!user || !threadId || regenerating) return
-                    setRegenerating(true)
-                    try {
-                      const token = await user.getIdToken()
-                      
-                      // Add timeout handling
-                      const controller = new AbortController()
-                      const timeoutId = setTimeout(() => controller.abort(), 35000) // 35 second timeout
-                      
-                      const response = await fetch("/api/drafts/regenerate", {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                          uid: user.uid,
-                          threadId,
-                          tone: selectedTone,
-                        }),
-                        signal: controller.signal,
-                      })
-                      
-                      clearTimeout(timeoutId)
-                      
-                      if (!response.ok) {
-                        const errorData = await response.json()
-                        throw new Error(errorData.error || "Failed to generate draft")
-                      }
-                      
-                      const data = await response.json()
-                      if (!data.success) {
-                        throw new Error(data.error || "Failed to generate draft")
-                      }
-                    } catch (error: any) {
-                      console.error("Error generating draft:", error)
-                      if (error.name === "AbortError") {
-                        alert("Draft generation timed out. Please try again.")
-                      } else {
-                        alert(`Error generating draft: ${error.message || "Unknown error"}`)
-                      }
-                    } finally {
-                      setRegenerating(false)
-                    }
-                  }}
-                  disabled={regenerating}
-                  className="h-7 text-xs bg-accentBlue hover:bg-accentBlue/90 text-bg0"
-                >
-                  {regenerating ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="h-3 w-3 mr-1" />
-                      Generate Draft
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {thread.draftState === "FAILED" && (
-          <div className="p-4 border-b border-border-0 bg-red-500/10">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-red-400">Draft Generation Failed</p>
-                {thread.draftError && (
-                  <p className="text-xs text-text2 mt-1">{thread.draftError}</p>
-                )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  if (!user || !threadId || regenerating) return
-                  setRegenerating(true)
-                  try {
-                    const token = await user.getIdToken()
-                    
-                    // Add timeout handling
-                    const controller = new AbortController()
-                    const timeoutId = setTimeout(() => controller.abort(), 35000) // 35 second timeout
-                    
-                    const response = await fetch("/api/drafts/regenerate", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                      },
-                      body: JSON.stringify({
-                        uid: user.uid,
-                        threadId,
-                        tone: "concise",
-                      }),
-                      signal: controller.signal,
-                    })
-                    
-                    clearTimeout(timeoutId)
-                    
-                    if (!response.ok) {
-                      const errorData = await response.json()
-                      throw new Error(errorData.error || "Failed to regenerate draft")
-                    }
-                    
-                    const data = await response.json()
-                    if (!data.success) {
-                      throw new Error(data.error || "Failed to regenerate draft")
-                    }
-                  } catch (error: any) {
-                    console.error("Error regenerating draft:", error)
-                    if (error.name === "AbortError") {
-                      alert("Draft generation timed out. Please try again.")
-                    } else {
-                      alert(`Error regenerating draft: ${error.message || "Unknown error"}`)
-                    }
-                  } finally {
-                    setRegenerating(false)
-                  }
-                }}
-                disabled={regenerating}
-                className="h-7 text-xs"
-              >
-                {regenerating ? (
-                  <>
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Retrying...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Retry
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Messages */}
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={message.direction === "OUTBOUND" ? "ml-auto max-w-[85%] md:max-w-[80%]" : "mr-auto max-w-[85%] md:max-w-[80%]"}
-            >
-              <div
-                className={cn(
-                  message.direction === "OUTBOUND" ? "bg-accentBlue/10 border border-accentBlue/20" : "bg-bg1 border border-border-0",
-                  "rounded-lg overflow-hidden"
-                )}
-              >
-                <div className="p-3 md:p-4">
-                  <div className="flex items-start justify-between mb-2 gap-2 flex-wrap">
-                    <div className="flex flex-col gap-1 min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-text0 text-xs md:text-sm truncate">
-                          {message.from.name || message.from.email}
-                        </span>
-                        {message.direction === "OUTBOUND" && (
-                          <span className="text-xs text-accentBlue flex-shrink-0">(You)</span>
-                        )}
-                      </div>
-                      {message.from.email && message.from.name && (
-                        <span className="text-xs text-text2 truncate">{message.from.email}</span>
+            ) : thread.draftState === "FAILED" ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-red-400">Draft Generation Failed</p>
+                      {thread.draftError && (
+                        <p className="text-xs text-text2 mt-1">{thread.draftError}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 md:gap-2 text-xs text-text2 flex-shrink-0">
-                      <Clock className="h-3 w-3 flex-shrink-0" />
-                      <span className="hidden md:inline">{format(new Date(message.dateISO), "MMM d, yyyy h:mm a")}</span>
-                      <span className="md:hidden">{format(new Date(message.dateISO), "MMM d, h:mm a")}</span>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRegenerateDraft}
+                      disabled={regenerating}
+                      className="h-7 text-xs"
+                    >
+                      {regenerating ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Retrying...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Retry
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  {message.to.length > 0 && (
-                    <div className="text-xs text-text2 mb-2 break-words">
-                      To: {message.to.map((t) => t.name || t.email).join(", ")}
-                    </div>
-                  )}
-                  {message.cc && message.cc.length > 0 && (
-                    <div className="text-xs text-text2 mb-2 break-words">
-                      Cc: {message.cc.map((c) => c.name || c.email).join(", ")}
-                    </div>
-                  )}
-                  {message.bodyHtml && DOMPurify ? (
-                    <div 
-                      className="email-html-content text-text1 text-xs md:text-sm break-words"
-                      dangerouslySetInnerHTML={{ 
-                        __html: DOMPurify.sanitize(message.bodyHtml, {
-                          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'img', 'div', 'span', 'table', 'thead', 'tbody', 'tr', 'td', 'th'],
-                          ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style'],
-                          ALLOW_DATA_ATTR: false,
-                        })
-                      }}
-                      style={{
-                        color: 'inherit',
-                      }}
-                    />
-                  ) : (
-                    <div className="text-text1 text-xs md:text-sm whitespace-pre-wrap break-words">{message.bodyText || message.snippet}</div>
-                  )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ) : (
+              <div className="text-center text-text2 py-8">
+                <p>No draft available</p>
+                <p className="text-xs mt-2">This thread doesn't need a reply or draft generation is not applicable</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Raw Tab - Messages */}
+        {activeTab === "raw" && (
+          <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+            {messages.length === 0 ? (
+              <div className="text-center text-text2 py-8">
+                <p>No messages found</p>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={message.direction === "OUTBOUND" ? "ml-auto max-w-[85%] md:max-w-[80%]" : "mr-auto max-w-[85%] md:max-w-[80%]"}
+                >
+                  <div
+                    className={cn(
+                      message.direction === "OUTBOUND" ? "bg-accentBlue/10 border border-accentBlue/20" : "bg-bg1 border border-border-0",
+                      "rounded-lg overflow-hidden"
+                    )}
+                  >
+                    <div className="p-3 md:p-4">
+                      <div className="flex items-start justify-between mb-2 gap-2 flex-wrap">
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-text0 text-xs md:text-sm truncate">
+                              {message.from.name || message.from.email}
+                            </span>
+                            {message.direction === "OUTBOUND" && (
+                              <span className="text-xs text-accentBlue flex-shrink-0">(You)</span>
+                            )}
+                          </div>
+                          {message.from.email && message.from.name && (
+                            <span className="text-xs text-text2 truncate">{message.from.email}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 md:gap-2 text-xs text-text2 flex-shrink-0">
+                          <Clock className="h-3 w-3 flex-shrink-0" />
+                          <span className="hidden md:inline">{format(new Date(message.dateISO), "MMM d, yyyy h:mm a")}</span>
+                          <span className="md:hidden">{format(new Date(message.dateISO), "MMM d, h:mm a")}</span>
+                        </div>
+                      </div>
+                      {message.to.length > 0 && (
+                        <div className="text-xs text-text2 mb-2 break-words">
+                          To: {message.to.map((t) => t.name || t.email).join(", ")}
+                        </div>
+                      )}
+                      {message.cc && message.cc.length > 0 && (
+                        <div className="text-xs text-text2 mb-2 break-words">
+                          Cc: {message.cc.map((c) => c.name || c.email).join(", ")}
+                        </div>
+                      )}
+                      {message.bodyHtml && DOMPurify ? (
+                        <div 
+                          className="email-html-content text-text1 text-xs md:text-sm break-words"
+                          dangerouslySetInnerHTML={{ 
+                            __html: DOMPurify.sanitize(message.bodyHtml, {
+                              ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'img', 'div', 'span', 'table', 'thead', 'tbody', 'tr', 'td', 'th'],
+                              ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style'],
+                              ALLOW_DATA_ATTR: false,
+                            })
+                          }}
+                          style={{
+                            color: 'inherit',
+                          }}
+                        />
+                      ) : (
+                        <div className="text-text1 text-xs md:text-sm whitespace-pre-wrap break-words">{message.bodyText || message.snippet}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
