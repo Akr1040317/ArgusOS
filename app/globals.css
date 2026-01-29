@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Email HTML content styling */
+.email-html-content {
+  color: inherit;
+  line-height: 1.6;
+}
+
+.email-html-content p {
+  margin: 0.5em 0;
+}
+
+.email-html-content p:first-child {
+  margin-top: 0;
+}
+
+.email-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+.email-html-content a {
+  color: rgb(96, 165, 250);
+  text-decoration: underline;
+}
+
+.email-html-content a:hover {
+  color: rgb(147, 197, 253);
+}
+
+.email-html-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.email-html-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.email-html-content table td,
+.email-html-content table th {
+  padding: 0.5em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.email-html-content ul,
+.email-html-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.email-html-content blockquote {
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  padding-left: 1em;
+  margin: 1em 0;
+  font-style: italic;
+}
+
+.email-html-content pre {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.5em;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+
+.email-html-content code {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.email-html-content h1,
+.email-html-content h2,
+.email-html-content h3,
+.email-html-content h4,
+.email-html-content h5,
+.email-html-content h6 {
+  margin: 1em 0 0.5em 0;
+  font-weight: 600;
+}
+
+.email-html-content h1:first-child,
+.email-html-content h2:first-child,
+.email-html-content h3:first-child {
+  margin-top: 0;
+}
+
+@layer base {
+  :root {
+    --background: 220 20% 5%;
+    --foreground: 220 20% 95%;
+    --card: 220 20% 8%;
+    --card-foreground: 220 20% 95%;
+    --popover: 220 20% 8%;
+    --popover-foreground: 220 20% 95%;
+    --primary: 210 100% 65%;
+    --primary-foreground: 220 20% 5%;
+    --secondary: 220 20% 15%;
+    --secondary-foreground: 220 20% 95%;
+    --muted: 220 20% 12%;
+    --muted-foreground: 220 20% 65%;
+    --accent: 260 100% 70%;
+    --accent-foreground: 220 20% 5%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 220 20% 95%;
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 210 100% 65%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-bg0 text-text0;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
