@@ -10,6 +10,7 @@ import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, Mail, Copy, 
 import { EventForm } from "./EventForm"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { getAccountColor } from "@/lib/utils/accountColors"
 
 interface CalendarEvent {
   id: string
@@ -47,6 +48,8 @@ export function CalendarView() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [showEventForm, setShowEventForm] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
+  const [calendarAccounts, setCalendarAccounts] = useState<Array<{ accountId: string; email: string }>>([])
 
   // Fetch events directly from Google Calendar
   const fetchEventsFromGoogle = useCallback(async () => {
@@ -72,9 +75,13 @@ export function CalendarView() {
       const accountsData = await accountsResponse.json()
       if (!accountsData.accounts || accountsData.accounts.length === 0) {
         setEvents([])
+        setCalendarAccounts([])
         setLoading(false)
         return
       }
+
+      // Store accounts for filter display
+      setCalendarAccounts(accountsData.accounts)
 
       // Fetch events from all calendars
       const allEvents: CalendarEvent[] = []
@@ -163,14 +170,14 @@ export function CalendarView() {
       // Sort by start date
       allEvents.sort((a, b) => new Date(a.startISO).getTime() - new Date(b.startISO).getTime())
 
-      console.log(`Fetched ${allEvents.length} events from Google Calendar`)
+      console.log(`Fetched ${allEvents.length} events from Google Calendar${selectedAccountId ? ` (filtered by account)` : ""}`)
       setEvents(allEvents)
       setLoading(false)
     } catch (error) {
       console.error("Error fetching calendar events:", error)
       setLoading(false)
     }
-  }, [user])
+  }, [user, selectedAccountId])
 
   // Check for create query param
   useEffect(() => {
@@ -226,90 +233,136 @@ export function CalendarView() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border-0">
-        <div className="flex items-center gap-4">
-          <Calendar className="h-5 w-5 text-accentBlue" />
-          <h1 className="text-2xl font-bold text-text0">Calendar</h1>
-          <Button
-            onClick={() => {
-              setEditingEvent(null)
-              setShowEventForm(true)
-            }}
-            className="bg-accentBlue hover:bg-accentBlue/90 text-bg0"
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Event
-          </Button>
+      <div className="flex flex-col border-b border-border-0">
+        {/* Top Row: Title, Actions, Navigation */}
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-4">
+            <Calendar className="h-5 w-5 text-accentBlue" />
+            <h1 className="text-2xl font-bold text-text0">Calendar</h1>
+            <Button
+              onClick={() => {
+                setEditingEvent(null)
+                setShowEventForm(true)
+              }}
+              className="bg-accentBlue hover:bg-accentBlue/90 text-bg0"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Event
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "month" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("month")}
+                className="h-8 text-xs"
+              >
+                Month
+              </Button>
+              <Button
+                variant={viewMode === "week" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("week")}
+                className="h-8 text-xs"
+              >
+                Week
+              </Button>
+              <Button
+                variant={viewMode === "day" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("day")}
+                className="h-8 text-xs"
+              >
+                Day
+              </Button>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <Button
-              variant={viewMode === "month" ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => setViewMode("month")}
-              className="h-8 text-xs"
+              onClick={() => {
+                if (viewMode === "month") {
+                  setCurrentDate(addDays(currentDate, -30))
+                } else if (viewMode === "week") {
+                  setCurrentDate(addDays(currentDate, -7))
+                } else {
+                  setCurrentDate(addDays(currentDate, -1))
+                }
+              }}
+              className="h-8"
             >
-              Month
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === "week" ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => setViewMode("week")}
+              onClick={() => setCurrentDate(new Date())}
               className="h-8 text-xs"
             >
-              Week
+              Today
             </Button>
             <Button
-              variant={viewMode === "day" ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => setViewMode("day")}
-              className="h-8 text-xs"
+              onClick={() => {
+                if (viewMode === "month") {
+                  setCurrentDate(addDays(currentDate, 30))
+                } else if (viewMode === "week") {
+                  setCurrentDate(addDays(currentDate, 7))
+                } else {
+                  setCurrentDate(addDays(currentDate, 1))
+                }
+              }}
+              className="h-8"
             >
-              Day
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (viewMode === "month") {
-                setCurrentDate(addDays(currentDate, -30))
-              } else if (viewMode === "week") {
-                setCurrentDate(addDays(currentDate, -7))
-              } else {
-                setCurrentDate(addDays(currentDate, -1))
-              }
-            }}
-            className="h-8"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentDate(new Date())}
-            className="h-8 text-xs"
-          >
-            Today
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (viewMode === "month") {
-                setCurrentDate(addDays(currentDate, 30))
-              } else if (viewMode === "week") {
-                setCurrentDate(addDays(currentDate, 7))
-              } else {
-                setCurrentDate(addDays(currentDate, 1))
-              }
-            }}
-            className="h-8"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+
+        {/* Account Filter Row */}
+        {calendarAccounts.length > 0 && (
+          <div className="px-4 pb-3 border-t border-border-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-text2 mr-2">Account:</span>
+              <button
+                onClick={() => setSelectedAccountId(null)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs md:text-sm transition-colors",
+                  selectedAccountId === null
+                    ? "bg-accentBlue/20 text-accentBlue font-medium"
+                    : "bg-bg1 text-text2 hover:bg-bg0"
+                )}
+              >
+                All Accounts
+              </button>
+              {calendarAccounts.map((account) => {
+                const accountColor = getAccountColor(account.accountId)
+                return (
+                  <button
+                    key={account.accountId}
+                    onClick={() => setSelectedAccountId(account.accountId)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs md:text-sm transition-colors flex items-center gap-2",
+                      selectedAccountId === account.accountId
+                        ? "bg-accentBlue/20 text-accentBlue font-medium"
+                        : "bg-bg1 text-text2 hover:bg-bg0"
+                    )}
+                  >
+                    <div className={cn(
+                      "h-2 w-2 rounded-full",
+                      accountColor.bg,
+                      accountColor.border,
+                      "border"
+                    )} />
+                    <span className="truncate">{account.email}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Calendar Grid */}
