@@ -3,8 +3,9 @@ import { adminAuth } from "@/lib/firebase/admin"
 import { OAuth2Client } from "google-auth-library"
 
 const SCOPES = [
-  "https://www.googleapis.com/auth/gmail.readonly",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/gmail.modify", // For drafts and full access
+  "https://www.googleapis.com/auth/calendar.events", // For creating/editing events
 ]
 
 export async function POST(request: NextRequest) {
@@ -51,7 +52,8 @@ export async function POST(request: NextRequest) {
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: "offline",
       scope: SCOPES,
-      prompt: "consent",
+      prompt: "consent", // Force consent screen to show new scopes
+      include_granted_scopes: false, // Don't include previously granted scopes
       state: uid, // Pass UID in state for callback
     })
 

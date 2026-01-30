@@ -7,7 +7,8 @@ import { useAuthState } from "react-firebase-hooks/auth"
 import { useInboxShortcuts } from "@/lib/hooks/useInboxShortcuts"
 import { auth } from "@/lib/firebase/client"
 import { format } from "date-fns"
-import { Mail, User, Clock, Copy, RefreshCw, Loader2 } from "lucide-react"
+import { Mail, User, Clock, Copy, RefreshCw, Loader2, Send, Reply } from "lucide-react"
+import { EmailComposer } from "@/components/email/EmailComposer"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { getAccountColor, getAccountDisplayName } from "@/lib/utils/accountColors"
@@ -64,6 +65,9 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
   const [regenerating, setRegenerating] = useState(false)
   const [selectedTone, setSelectedTone] = useState<string>("concise")
   const [activeTab, setActiveTab] = useState<"summary" | "ask-actions" | "draft" | "raw">("summary")
+  const [showComposer, setShowComposer] = useState(false)
+  const [composerMode, setComposerMode] = useState<"compose" | "reply">("compose")
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null)
 
   // Set up inbox shortcuts
   const handleRegenerateDraft = async () => {
@@ -209,7 +213,22 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
     <div className="h-full flex flex-col bg-panel border-l border-border-0 min-w-0 overflow-hidden">
       {/* Thread Header - Fixed at top */}
       <div className="p-3 md:p-4 border-b border-border-0 flex-shrink-0">
-        <h2 className="text-base md:text-lg font-semibold text-text0 mb-2 break-words">{thread.subject || "(No Subject)"}</h2>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h2 className="text-base md:text-lg font-semibold text-text0 break-words flex-1">{thread.subject || "(No Subject)"}</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setComposerMode("compose")
+              setReplyingToMessage(null)
+              setShowComposer(true)
+            }}
+            className="h-7 text-xs flex-shrink-0"
+          >
+            <Mail className="h-3 w-3 mr-1" />
+            Compose
+          </Button>
+        </div>
         <div className="flex items-center gap-2 text-xs text-text2 flex-wrap">
           <div className="flex items-center gap-1.5 min-w-0">
             <User className="h-3 w-3 flex-shrink-0" />
@@ -506,6 +525,70 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
                       <Copy className="h-3 w-3 mr-1" />
                       Copy
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setComposerMode("reply")
+                        setShowComposer(true)
+                      }}
+                      className="h-7 text-xs border-accentBlue text-accentBlue hover:bg-accentBlue/10"
+                    >
+                      <Reply className="h-3 w-3 mr-1" />
+                      Reply
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        if (!user || !thread?.draftReply || !thread.accountId) return
+                        try {
+                          const token = await user.getIdToken()
+                          // Get all participants except the current user
+                          const recipients = thread.participants
+                            .filter((p) => {
+                              // Filter out current user's email
+                              const userEmail = user.email?.toLowerCase()
+                              const participantEmail = p.email?.toLowerCase()
+                              return participantEmail !== userEmail
+                            })
+                            .map((p) => p.email)
+                          
+                          if (recipients.length === 0) {
+                            alert("No recipients found")
+                            return
+                          }
+
+                          const response = await fetch("/api/email/send", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({
+                              accountId: thread.accountId,
+                              to: recipients,
+                              subject: thread.draftReply.subject,
+                              body: thread.draftReply.text,
+                              threadId: threadId || undefined,
+                            }),
+                          })
+                          const data = await response.json()
+                          if (data.success) {
+                            alert("Email sent successfully!")
+                            // Refresh thread to show sent message
+                            window.location.reload()
+                          } else {
+                            throw new Error(data.error || "Failed to send email")
+                          }
+                        } catch (error: any) {
+                          console.error("Error sending email:", error)
+                          alert(`Error sending email: ${error.message || "Unknown error"}`)
+                        }
+                      }}
+                      className="h-7 text-xs bg-accentBlue hover:bg-accentBlue/90 text-bg0"
+                    >
+                      <Send className="h-3 w-3 mr-1" />
+                      Send
+                    </Button>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -643,6 +726,21 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
                           )}
                         </div>
                         <div className="flex items-center gap-1 md:gap-2 text-xs text-text2 flex-shrink-0">
+                          {message.direction === "INBOUND" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setReplyingToMessage(message)
+                                setComposerMode("reply")
+                                setShowComposer(true)
+                              }}
+                              className="h-6 px-2 text-xs"
+                            >
+                              <Reply className="h-3 w-3 mr-1" />
+                              Reply
+                            </Button>
+                          )}
                           <Clock className="h-3 w-3 flex-shrink-0" />
                           <span className="hidden md:inline">{format(new Date(message.dateISO), "MMM d, yyyy h:mm a")}</span>
                           <span className="md:hidden">{format(new Date(message.dateISO), "MMM d, h:mm a")}</span>
@@ -683,6 +781,47 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
           </div>
         )}
       </div>
+
+      {/* Email Composer */}
+      <EmailComposer
+        open={showComposer}
+        onClose={() => {
+          setShowComposer(false)
+          setReplyingToMessage(null)
+        }}
+        threadId={composerMode === "reply" && threadId ? threadId : undefined}
+        initialTo={
+          composerMode === "reply" && replyingToMessage
+            ? [replyingToMessage.from.email]
+            : composerMode === "reply" && thread
+            ? thread.participants
+                .filter((p) => {
+                  const userEmail = user?.email?.toLowerCase()
+                  return p.email?.toLowerCase() !== userEmail
+                })
+                .map((p) => p.email)
+            : []
+        }
+        initialSubject={
+          composerMode === "reply" && thread
+            ? thread.subject.startsWith("Re:") ? thread.subject : `Re: ${thread.subject}`
+            : ""
+        }
+        initialBody={
+          composerMode === "reply" && replyingToMessage
+            ? `\n\n---\nOn ${format(new Date(replyingToMessage.dateISO), "MMM d, yyyy 'at' h:mm a")}, ${replyingToMessage.from.name || replyingToMessage.from.email} wrote:\n\n${replyingToMessage.bodyText}`
+            : ""
+        }
+        onSent={() => {
+          setShowComposer(false)
+          setReplyingToMessage(null)
+          // Thread will auto-refresh via Firestore listener
+        }}
+        onDraftSaved={() => {
+          setShowComposer(false)
+          setReplyingToMessage(null)
+        }}
+      />
     </div>
   )
 }

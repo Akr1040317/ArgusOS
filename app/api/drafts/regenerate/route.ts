@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const userStyle = userData?.styleProfile
 
     // Generate draft
-    const draftResult = await generateDraft(thread, draftTone as any, userStyle)
+    const draftResult = await generateDraft(uid, thread, draftTone as any, userStyle)
 
     // Update thread with new draft
     await adminDb

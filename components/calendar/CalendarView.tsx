@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState, useEffect, useCallback } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth } from "@/lib/firebase/client"
-import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore"
-import { db } from "@/lib/firebase/client"
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addDays, startOfDay, startOfMonth, endOfMonth, startOfWeek as startWeek, endOfWeek as endWeek, isSameMonth } from "date-fns"
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, Mail, Copy, Loader2 } from "lucide-react"
+// Removed Firestore imports - now fetching directly from Google Calendar
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addDays, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfWeek as startWeek, endOfWeek as endWeek, isSameMonth } from "date-fns"
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, Mail, Copy, Loader2, Plus, Edit, Trash2 } from "lucide-react"
+import { EventForm } from "./EventForm"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
@@ -20,6 +20,8 @@ interface CalendarEvent {
   location?: string
   attendees: Array<{ email: string; name?: string }>
   organizer?: { email: string; name?: string }
+  calendarId?: string
+  accountId?: string
   prepPack?: {
     contextSummary: string
     openLoops: string[]
@@ -36,12 +38,150 @@ interface CalendarEvent {
 
 export function CalendarView() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [user] = useAuthState(auth)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month")
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [showEventForm, setShowEventForm] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+
+  // Fetch events directly from Google Calendar
+  const fetchEventsFromGoogle = useCallback(async () => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      const now = new Date()
+      // Fetch events from 30 days ago to 60 days ahead (covers month view + some buffer)
+      const startRange = addDays(now, -30)
+      const endRange = addDays(now, 60)
+      const timeMin = startOfDay(startRange).toISOString()
+      const timeMax = endOfDay(endRange).toISOString()
+
+      // Get calendar accounts
+      const token = await user.getIdToken()
+      const accountsResponse = await fetch("/api/integrations/calendar/accounts", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const accountsData = await accountsResponse.json()
+      if (!accountsData.accounts || accountsData.accounts.length === 0) {
+        setEvents([])
+        setLoading(false)
+        return
+      }
+
+      // Fetch events from all calendars
+      const allEvents: CalendarEvent[] = []
+      for (const account of accountsData.accounts) {
+        try {
+          // Get calendars for this account
+          const calendarsResponse = await fetch(`/api/calendar/calendars?accountId=${account.accountId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+
+          if (!calendarsResponse.ok) {
+            const errorData = await calendarsResponse.json().catch(() => ({}))
+            console.error(`Error fetching calendars for account ${account.accountId}:`, {
+              status: calendarsResponse.status,
+              error: errorData.error || "Unknown error",
+            })
+            // Try to fetch from primary calendar as fallback
+            try {
+              const eventsResponse = await fetch(
+                `/api/calendar/events/list?accountId=${account.accountId}&calendarId=primary&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&maxResults=500`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              )
+              const eventsData = await eventsResponse.json()
+              if (eventsData.success && eventsData.events) {
+                allEvents.push(...eventsData.events)
+              }
+            } catch (fallbackError) {
+              console.error(`Fallback fetch also failed for ${account.accountId}:`, fallbackError)
+            }
+            continue
+          }
+
+          const calendarsData = await calendarsResponse.json()
+          if (!calendarsData.success) {
+            console.error(`Error fetching calendars for account ${account.accountId}:`, calendarsData.error)
+            continue
+          }
+          if (!calendarsData.calendars || calendarsData.calendars.length === 0) {
+            console.warn(`No calendars found for account ${account.accountId}`)
+            continue
+          }
+
+          // Fetch events from each calendar
+          for (const calendar of calendarsData.calendars) {
+            try {
+              const eventsResponse = await fetch(
+                `/api/calendar/events/list?accountId=${account.accountId}&calendarId=${calendar.id}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&maxResults=500`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              )
+
+              if (!eventsResponse.ok) {
+                const errorData = await eventsResponse.json().catch(() => ({}))
+                console.error(`Error fetching events for calendar ${calendar.id}:`, {
+                  status: eventsResponse.status,
+                  error: errorData.error || "Unknown error",
+                })
+                continue
+              }
+
+              const eventsData = await eventsResponse.json()
+              if (eventsData.success && eventsData.events) {
+                allEvents.push(...eventsData.events)
+              } else if (eventsData.error) {
+                console.error(`Error in events response for calendar ${calendar.id}:`, eventsData.error)
+              }
+            } catch (calendarError: any) {
+              console.error(`Error fetching events for calendar ${calendar.id}:`, calendarError.message)
+            }
+          }
+        } catch (error: any) {
+          console.error(`Error fetching events for account ${account.accountId}:`, error)
+          console.error("Error details:", error.message)
+        }
+      }
+
+      // Sort by start date
+      allEvents.sort((a, b) => new Date(a.startISO).getTime() - new Date(b.startISO).getTime())
+
+      console.log(`Fetched ${allEvents.length} events from Google Calendar`)
+      setEvents(allEvents)
+      setLoading(false)
+    } catch (error) {
+      console.error("Error fetching calendar events:", error)
+      setLoading(false)
+    }
+  }, [user])
+
+  // Check for create query param
+  useEffect(() => {
+    const createParam = searchParams.get("create")
+    if (createParam === "true") {
+      setShowEventForm(true)
+      setEditingEvent(null)
+      // Clean up URL
+      router.replace("/dashboard/calendar")
+    }
+  }, [searchParams, router])
 
   // Handle event query parameter
   useEffect(() => {
@@ -54,42 +194,15 @@ export function CalendarView() {
     }
   }, [searchParams, events])
 
+  // Fetch events on mount and when user changes
   useEffect(() => {
-    if (!user) return
+    fetchEventsFromGoogle()
+  }, [fetchEventsFromGoogle])
 
-    const now = new Date()
-    // Fetch events from 30 days ago to 60 days ahead (covers month view + some buffer)
-    const startRange = addDays(now, -30)
-    const endRange = addDays(now, 60)
-    const startOfRange = startOfDay(startRange).toISOString()
-    const endOfRangeDate = endOfWeek(endRange).toISOString()
-
-    const eventsRef = collection(db, "calendarEvents", user.uid, "events")
-    const q = query(
-      eventsRef,
-      where("startISO", ">=", startOfRange),
-      where("startISO", "<=", endOfRangeDate),
-      orderBy("startISO", "asc")
-    )
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const eventData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as CalendarEvent[]
-        setEvents(eventData)
-        setLoading(false)
-      },
-      (error) => {
-        console.error("Error fetching events:", error)
-        setLoading(false)
-      }
-    )
-
-    return () => unsubscribe()
-  }, [user])
+  // Refresh events when view mode or date changes
+  useEffect(() => {
+    fetchEventsFromGoogle()
+  }, [viewMode, currentDate, fetchEventsFromGoogle])
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 })
@@ -117,6 +230,17 @@ export function CalendarView() {
         <div className="flex items-center gap-4">
           <Calendar className="h-5 w-5 text-accentBlue" />
           <h1 className="text-2xl font-bold text-text0">Calendar</h1>
+          <Button
+            onClick={() => {
+              setEditingEvent(null)
+              setShowEventForm(true)
+            }}
+            className="bg-accentBlue hover:bg-accentBlue/90 text-bg0"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Event
+          </Button>
           <div className="flex items-center gap-2">
             <Button
               variant={viewMode === "month" ? "default" : "outline"}
@@ -389,15 +513,108 @@ export function CalendarView() {
         {/* Event Detail Panel */}
         {selectedEvent && (
           <div className="w-96 border-l border-border-0 bg-panel overflow-y-auto">
-            <EventDetailPanel event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+            <EventDetailPanel
+              event={selectedEvent}
+              onClose={() => setSelectedEvent(null)}
+              onEdit={() => {
+                setEditingEvent(selectedEvent)
+                setShowEventForm(true)
+              }}
+              onDelete={async () => {
+                if (!user || !selectedEvent.id || !selectedEvent.accountId || !selectedEvent.calendarId) {
+                  alert("Missing event information for deletion")
+                  return
+                }
+
+                if (!confirm("Are you sure you want to delete this event?")) {
+                  return
+                }
+
+                try {
+                  const token = await user.getIdToken()
+                  const response = await fetch("/api/calendar/events/delete", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      accountId: selectedEvent.accountId,
+                      calendarId: selectedEvent.calendarId,
+                      eventId: selectedEvent.id, // This is the providerEventId
+                    }),
+                  })
+
+                  const data = await response.json()
+                  if (data.success) {
+                    setSelectedEvent(null)
+                    // Refresh events from Google Calendar
+                    fetchEventsFromGoogle()
+                  } else {
+                    throw new Error(data.error || "Failed to delete event")
+                  }
+                } catch (error: any) {
+                  console.error("Error deleting event:", error)
+                  alert(`Error deleting event: ${error.message || "Unknown error"}`)
+                }
+              }}
+            />
           </div>
         )}
       </div>
+
+      {/* Event Form */}
+      <EventForm
+        open={showEventForm}
+        onClose={() => {
+          setShowEventForm(false)
+          setEditingEvent(null)
+        }}
+        eventId={editingEvent?.id}
+        initialData={
+          editingEvent
+            ? {
+                title: editingEvent.title,
+                description: editingEvent.description,
+                startISO: editingEvent.startISO,
+                endISO: editingEvent.endISO || editingEvent.startISO,
+                location: editingEvent.location,
+                attendees: editingEvent.attendees,
+              }
+            : undefined
+        }
+        initialAccountId={editingEvent?.accountId}
+        initialCalendarId={editingEvent?.calendarId}
+        onSaved={() => {
+          setShowEventForm(false)
+          setEditingEvent(null)
+          setSelectedEvent(null)
+          // Refresh events from Google Calendar
+          fetchEventsFromGoogle()
+        }}
+        onDeleted={() => {
+          setShowEventForm(false)
+          setEditingEvent(null)
+          setSelectedEvent(null)
+          // Refresh events from Google Calendar
+          fetchEventsFromGoogle()
+        }}
+      />
     </div>
   )
 }
 
-function EventDetailPanel({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
+function EventDetailPanel({
+  event,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  event: CalendarEvent
+  onClose: () => void
+  onEdit?: () => void
+  onDelete?: () => void
+}) {
   const [user] = useAuthState(auth)
   const [generatingPrepPack, setGeneratingPrepPack] = useState(false)
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false)
@@ -480,9 +697,21 @@ function EventDetailPanel({ event, onClose }: { event: CalendarEvent; onClose: (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-text0">{event.title}</h2>
-        <Button variant="ghost" size="sm" onClick={onClose} className="h-6 w-6 p-0">
-          ×
-        </Button>
+        <div className="flex items-center gap-2">
+          {onEdit && (
+            <Button variant="ghost" size="sm" onClick={onEdit} className="h-6 w-6 p-0" title="Edit event">
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="ghost" size="sm" onClick={onDelete} className="h-6 w-6 p-0 text-red-400 hover:text-red-300" title="Delete event">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={onClose} className="h-6 w-6 p-0">
+            ×
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-4">

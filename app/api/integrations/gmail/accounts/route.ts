@@ -62,14 +62,23 @@ export async function DELETE(request: NextRequest) {
     // Remove account from array
     const updatedAccounts = accounts.filter((acc: any) => acc.accountId !== accountId)
     
-    // Remove tokens
+    // Remove tokens (both Gmail and Calendar use same account)
     const tokenRefs = data?.tokenRefs?.gmail || {}
     delete tokenRefs[accountId]
+    
+    const calendarTokenRefs = data?.tokenRefs?.calendar || {}
+    delete calendarTokenRefs[accountId]
+    
+    // Remove calendar account too (if exists)
+    const calendarAccounts = data?.calendar?.accounts || []
+    const updatedCalendarAccounts = calendarAccounts.filter((acc: any) => acc.accountId !== accountId)
     
     // Update document
     await docRef.update({
       "gmail.accounts": updatedAccounts,
+      "calendar.accounts": updatedCalendarAccounts,
       [`tokenRefs.gmail`]: tokenRefs,
+      [`tokenRefs.calendar`]: calendarTokenRefs,
     })
 
     // Remove lookup entry

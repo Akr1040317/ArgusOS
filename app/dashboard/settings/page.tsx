@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Play, Mail, CheckCircle2, Loader2, X, RefreshCw, Calendar } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { AISettings } from "@/components/settings/AISettings"
 
 interface GmailAccount {
   accountId: string
@@ -132,6 +133,42 @@ export default function SettingsPage() {
     } catch (error) {
       console.error("Error connecting Gmail:", error)
       setSyncStatus("Failed to initiate Gmail connection")
+    }
+  }
+
+  const handleReconnectGmail = async (accountId: string) => {
+    if (!user) return
+
+    if (!confirm(`Reconnect ${accountId}? This will disconnect and reconnect to grant new permissions (email sending & calendar editing).`)) {
+      return
+    }
+
+    try {
+      // First disconnect
+      const token = await user.getIdToken()
+      await fetch(`/api/integrations/gmail/accounts?accountId=${encodeURIComponent(accountId)}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      // Then reconnect (which will force consent screen)
+      const response = await fetch("/api/integrations/google/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (data.authUrl) {
+        window.location.href = data.authUrl
+      }
+    } catch (error: any) {
+      console.error("Error reconnecting Gmail:", error)
+      setSyncStatus(`Reconnect error: ${error.message}`)
     }
   }
 
@@ -457,6 +494,16 @@ export default function SettingsPage() {
                           )}
                         </Button>
                         <Button
+                          onClick={() => handleReconnectGmail(account.accountId)}
+                          variant="outline"
+                          size="sm"
+                          className="border-accentPurple text-accentPurple hover:bg-accentPurple/10"
+                          title="Reconnect to grant new permissions (email sending & calendar editing)"
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Reconnect
+                        </Button>
+                        <Button
                           onClick={() => handleStartWatch(account.accountId)}
                           variant="outline"
                           size="sm"
@@ -632,6 +679,11 @@ export default function SettingsPage() {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* AI Settings Section */}
+      <div className="mt-8">
+        <AISettings />
       </div>
     </div>
   )

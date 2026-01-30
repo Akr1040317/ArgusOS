@@ -197,7 +197,7 @@ async function generatePrepPackForEvent(
     })
 
     // Generate prep pack
-    const prepPack = await generatePrepPack(event, relatedThreads)
+    const prepPack = await generatePrepPack(uid, event, relatedThreads)
 
     // Update event with prep pack
     await adminDb

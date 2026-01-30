@@ -28,6 +28,7 @@ export interface UserProfile {
  * Classify a thread using AI
  */
 export async function classifyThread(
+  uid: string | null,
   thread: ThreadData,
   userProfile: UserProfile = { vipEmails: [], vipDomains: [], importantKeywords: [] }
 ): Promise<ClassificationResult> {
@@ -56,18 +57,24 @@ export async function classifyThread(
   userPrompt = userPrompt.replace("{thread}", JSON.stringify(threadData))
 
   try {
-    const response = await chatCompletion(
+    const response = await unifiedChatCompletion(
+      uid,
       [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      "gpt-4o-mini", // Fast model for classification
-      0.2, // Low temperature for consistency
-      500
+      {
+        feature: "classification" as AIFeature,
+        model: "gpt-4o-mini",
+        temperature: 0.2,
+        maxTokens: 500,
+      }
     )
 
     const result = await parseJSONResponse<ClassificationResult>(
+      uid,
       response,
+      "classification" as AIFeature,
       "Fix the JSON. Return only valid JSON with keys: importanceScore, priority, split, status, reasons"
     )
 
@@ -115,14 +122,18 @@ export async function summarizeThread(thread: ThreadData): Promise<{
   userPrompt = userPrompt.replace("{thread}", JSON.stringify(threadData))
 
   try {
-    const response = await chatCompletion(
+    const response = await unifiedChatCompletion(
+      uid,
       [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      "gpt-4o-mini",
-      0.3,
-      800
+      {
+        feature: "summarization" as AIFeature,
+        model: "gpt-4o-mini",
+        temperature: 0.3,
+        maxTokens: 800,
+      }
     )
 
     // Parse the summary format: bullets, Ask:, Open loops:
@@ -172,7 +183,7 @@ export async function summarizeThread(thread: ThreadData): Promise<{
 /**
  * Extract actions from a thread using AI
  */
-export async function extractActions(thread: ThreadData): Promise<ExtractionResult> {
+export async function extractActions(uid: string | null, thread: ThreadData): Promise<ExtractionResult> {
   const prompt = getExtractPrompt()
   
   // Split prompt into system and user parts
@@ -225,6 +236,7 @@ export async function extractActions(thread: ThreadData): Promise<ExtractionResu
  * Generate a draft reply for a thread
  */
 export async function generateDraft(
+  uid: string | null,
   thread: ThreadData,
   tone: "concise" | "warm" | "assertive" | "formal" = "concise",
   userStyle?: {
@@ -316,9 +328,9 @@ export async function runAIPipeline(
 
     // Run all AI steps in parallel for speed
     const [classification, summarization, extraction] = await Promise.all([
-      classifyThread(thread, userProfile),
-      summarizeThread(thread),
-      extractActions(thread),
+      classifyThread(uid, thread, userProfile),
+      summarizeThread(uid, thread),
+      extractActions(uid, thread),
     ])
 
     // Check if we should generate a draft
@@ -332,7 +344,7 @@ export async function runAIPipeline(
 
     if (shouldGenerateDraft) {
       try {
-        draftResult = await generateDraft(thread, "concise", userStyle)
+        draftResult = await generateDraft(uid, thread, "concise", userStyle)
         draftState = "READY"
       } catch (error: any) {
         console.error("Draft generation failed:", error)

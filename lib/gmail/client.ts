@@ -159,4 +159,156 @@ export class GmailClient {
   getHeader(headers: Array<{ name: string; value: string }>, name: string): string {
     return headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value || ""
   }
+
+  /**
+   * Create RFC 2822 email format
+   */
+  private createEmailRaw(
+    from: string,
+    to: string[],
+    subject: string,
+    body: string,
+    cc?: string[],
+    bcc?: string[],
+    threadId?: string,
+    inReplyTo?: string,
+    references?: string
+  ): string {
+    const lines: string[] = []
+
+    // Headers
+    lines.push(`From: ${from}`)
+    lines.push(`To: ${to.join(", ")}`)
+    if (cc && cc.length > 0) {
+      lines.push(`Cc: ${cc.join(", ")}`)
+    }
+    if (bcc && bcc.length > 0) {
+      lines.push(`Bcc: ${bcc.join(", ")}`)
+    }
+    lines.push(`Subject: ${subject}`)
+    lines.push(`Date: ${new Date().toUTCString()}`)
+    lines.push(`MIME-Version: 1.0`)
+    
+    // Thread headers for replies
+    if (threadId && inReplyTo) {
+      lines.push(`In-Reply-To: ${inReplyTo}`)
+    }
+    if (threadId && references) {
+      lines.push(`References: ${references}`)
+    }
+
+    // Body
+    lines.push(`Content-Type: text/plain; charset=UTF-8`)
+    lines.push(`Content-Transfer-Encoding: 7bit`)
+    lines.push("")
+    lines.push(body)
+
+    return lines.join("\r\n")
+  }
+
+  /**
+   * Send an email message
+   */
+  async sendMessage(
+    from: string,
+    to: string[],
+    subject: string,
+    body: string,
+    options?: {
+      cc?: string[]
+      bcc?: string[]
+      threadId?: string
+      inReplyTo?: string
+      references?: string
+    }
+  ): Promise<string> {
+    const raw = this.createEmailRaw(
+      from,
+      to,
+      subject,
+      body,
+      options?.cc,
+      options?.bcc,
+      options?.threadId,
+      options?.inReplyTo,
+      options?.references
+    )
+
+    const encoded = Buffer.from(raw)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "")
+
+    const response = await this.gmail.users.messages.send({
+      userId: "me",
+      requestBody: {
+        raw: encoded,
+        threadId: options?.threadId,
+      },
+    })
+
+    return response.data.id || ""
+  }
+
+  /**
+   * Create a draft email
+   */
+  async createDraft(
+    from: string,
+    to: string[],
+    subject: string,
+    body: string,
+    options?: {
+      cc?: string[]
+      bcc?: string[]
+      threadId?: string
+      inReplyTo?: string
+      references?: string
+    }
+  ): Promise<string> {
+    const raw = this.createEmailRaw(
+      from,
+      to,
+      subject,
+      body,
+      options?.cc,
+      options?.bcc,
+      options?.threadId,
+      options?.inReplyTo,
+      options?.references
+    )
+
+    const encoded = Buffer.from(raw)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "")
+
+    const response = await this.gmail.users.drafts.create({
+      userId: "me",
+      requestBody: {
+        message: {
+          raw: encoded,
+          threadId: options?.threadId,
+        },
+      },
+    })
+
+    return response.data.id || ""
+  }
+
+  /**
+   * Send a draft email
+   */
+  async sendDraft(draftId: string): Promise<string> {
+    const response = await this.gmail.users.drafts.send({
+      userId: "me",
+      requestBody: {
+        id: draftId,
+      },
+    })
+
+    return response.data.id || ""
+  }
 }

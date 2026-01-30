@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Generate follow-up draft
     const draft = await generateFollowUpDraft(
+      uid,
       {
         title: eventData.title || "",
         description: eventData.description || undefined,

@@ -64,7 +64,8 @@ Return JSON:
   "suggestedAgenda": string[]
 }`
 
-    const response = await chatCompletion(
+    const response = await unifiedChatCompletion(
+      uid,
       [
         {
           role: "system",
@@ -72,9 +73,12 @@ Return JSON:
         },
         { role: "user", content: prompt },
       ],
-      "gpt-4o-mini",
-      0.3,
-      800
+      {
+        feature: "prep_pack" as AIFeature,
+        model: "gpt-4o-mini",
+        temperature: 0.3,
+        maxTokens: 800,
+      }
     )
 
     // Parse JSON response

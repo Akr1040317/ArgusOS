@@ -73,7 +73,8 @@ export async function processChatQuery(
   userPrompt = userPrompt.replace("{events[]", eventsJson)
 
   try {
-    const response = await chatCompletion(
+    const response = await unifiedChatCompletion(
+      uid,
       [
         {
           role: "system",
@@ -81,9 +82,12 @@ export async function processChatQuery(
         },
         { role: "user", content: userPrompt },
       ],
-      "gpt-4o-mini",
-      0.7,
-      1500
+      {
+        feature: "chat" as AIFeature,
+        model: "gpt-4o-mini",
+        temperature: 0.7,
+        maxTokens: 1500,
+      }
     )
 
     // Parse JSON response

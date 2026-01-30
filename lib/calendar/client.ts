@@ -143,4 +143,188 @@ export class CalendarClient {
       return null
     }
   }
+
+  /**
+   * Create a new calendar event
+   */
+  async createEvent(
+    calendarId: string = "primary",
+    event: {
+      title: string
+      description?: string
+      startISO: string
+      endISO: string
+      location?: string
+      attendees?: Array<{ email: string; name?: string }>
+      allDay?: boolean
+    }
+  ): Promise<CalendarEvent> {
+    const eventData: any = {
+      summary: event.title,
+      description: event.description,
+      location: event.location,
+    }
+
+    // Set start/end times
+    if (event.allDay) {
+      const startDate = new Date(event.startISO)
+      const endDate = new Date(event.endISO)
+      eventData.start = { date: startDate.toISOString().split("T")[0] }
+      eventData.end = { date: endDate.toISOString().split("T")[0] }
+    } else {
+      eventData.start = { dateTime: event.startISO }
+      eventData.end = { dateTime: event.endISO }
+    }
+
+    // Add attendees if provided
+    if (event.attendees && event.attendees.length > 0) {
+      eventData.attendees = event.attendees.map((a) => ({
+        email: a.email,
+        displayName: a.name,
+      }))
+    }
+
+    const response = await this.calendar.events.insert({
+      calendarId,
+      requestBody: eventData,
+    })
+
+    if (!response.data || !response.data.id) {
+      throw new Error("Failed to create event in Google Calendar: No event ID returned")
+    }
+
+    const createdEvent = response.data
+    return {
+      id: createdEvent.id!,
+      summary: createdEvent.summary || "(No Title)",
+      description: createdEvent.description || undefined,
+      start: {
+        dateTime: createdEvent.start?.dateTime || undefined,
+        date: createdEvent.start?.date || undefined,
+      },
+      end: {
+        dateTime: createdEvent.end?.dateTime || undefined,
+        date: createdEvent.end?.date || undefined,
+      },
+      attendees: createdEvent.attendees?.map((a) => ({
+        email: a.email || "",
+        displayName: a.displayName || undefined,
+        responseStatus: a.responseStatus || undefined,
+      })),
+      location: createdEvent.location || undefined,
+      organizer: createdEvent.organizer
+        ? {
+            email: createdEvent.organizer.email || "",
+            displayName: createdEvent.organizer.displayName || undefined,
+          }
+        : undefined,
+      htmlLink: createdEvent.htmlLink || undefined,
+      status: createdEvent.status || undefined,
+    }
+  }
+
+  /**
+   * Update an existing calendar event
+   */
+  async updateEvent(
+    calendarId: string,
+    eventId: string,
+    updates: {
+      title?: string
+      description?: string
+      startISO?: string
+      endISO?: string
+      location?: string
+      attendees?: Array<{ email: string; name?: string }>
+      allDay?: boolean
+    }
+  ): Promise<CalendarEvent> {
+    // First get the existing event
+    const existingEvent = await this.getEvent(calendarId, eventId)
+    if (!existingEvent) {
+      throw new Error(`Event ${eventId} not found`)
+    }
+
+    const eventData: any = {}
+
+    if (updates.title !== undefined) {
+      eventData.summary = updates.title
+    }
+    if (updates.description !== undefined) {
+      eventData.description = updates.description
+    }
+    if (updates.location !== undefined) {
+      eventData.location = updates.location
+    }
+
+    // Update start/end times if provided
+    if (updates.startISO || updates.endISO || updates.allDay !== undefined) {
+      const allDay = updates.allDay !== undefined ? updates.allDay : existingEvent.start.date !== undefined
+      const startISO = updates.startISO || (existingEvent.start.dateTime || existingEvent.start.date)!
+      const endISO = updates.endISO || (existingEvent.end.dateTime || existingEvent.end.date)!
+
+      if (allDay) {
+        const startDate = new Date(startISO)
+        const endDate = new Date(endISO)
+        eventData.start = { date: startDate.toISOString().split("T")[0] }
+        eventData.end = { date: endDate.toISOString().split("T")[0] }
+      } else {
+        eventData.start = { dateTime: startISO }
+        eventData.end = { dateTime: endISO }
+      }
+    }
+
+    // Update attendees if provided
+    if (updates.attendees !== undefined) {
+      eventData.attendees = updates.attendees.map((a) => ({
+        email: a.email,
+        displayName: a.name,
+      }))
+    }
+
+    const response = await this.calendar.events.patch({
+      calendarId,
+      eventId,
+      requestBody: eventData,
+    })
+
+    const updatedEvent = response.data
+    return {
+      id: updatedEvent.id!,
+      summary: updatedEvent.summary || "(No Title)",
+      description: updatedEvent.description || undefined,
+      start: {
+        dateTime: updatedEvent.start?.dateTime || undefined,
+        date: updatedEvent.start?.date || undefined,
+      },
+      end: {
+        dateTime: updatedEvent.end?.dateTime || undefined,
+        date: updatedEvent.end?.date || undefined,
+      },
+      attendees: updatedEvent.attendees?.map((a) => ({
+        email: a.email || "",
+        displayName: a.displayName || undefined,
+        responseStatus: a.responseStatus || undefined,
+      })),
+      location: updatedEvent.location || undefined,
+      organizer: updatedEvent.organizer
+        ? {
+            email: updatedEvent.organizer.email || "",
+            displayName: updatedEvent.organizer.displayName || undefined,
+          }
+        : undefined,
+      htmlLink: updatedEvent.htmlLink || undefined,
+      status: updatedEvent.status || undefined,
+    }
+  }
+
+  /**
+   * Delete a calendar event
+   */
+  async deleteEvent(calendarId: string, eventId: string): Promise<void> {
+    await this.calendar.events.delete({
+      calendarId,
+      eventId,
+    })
+  }
 }

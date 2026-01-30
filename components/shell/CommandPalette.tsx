@@ -16,6 +16,8 @@ import {
   Sparkles,
   X,
   CheckSquare,
+  Mail,
+  Plus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -100,6 +102,24 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   ]
 
   const actionCommands = [
+    {
+      id: "compose-email",
+      label: "Compose Email",
+      icon: Mail,
+      keywords: ["compose", "email", "send", "write", "new email"],
+      action: () => {
+        router.push("/dashboard/inbox?compose=true")
+      },
+    },
+    {
+      id: "create-event",
+      label: "Create Event",
+      icon: Plus,
+      keywords: ["create", "event", "calendar", "meeting", "new event", "schedule"],
+      action: () => {
+        router.push("/dashboard/calendar?create=true")
+      },
+    },
     {
       id: "run-agent",
       label: "Run Agent Now",

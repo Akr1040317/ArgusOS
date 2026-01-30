@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const { threads, events } = await retrieveContext(uid, query)
 
     // Process query
-    const response = await processChatQuery(query, threads, events)
+    const response = await processChatQuery(uid, query, threads, events)
 
     // Store assistant message
     const assistantMessageRef = adminDb

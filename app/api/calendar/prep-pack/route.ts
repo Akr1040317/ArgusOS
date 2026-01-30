@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Generate prep pack
     const prepPack = await generatePrepPack(
+      uid,
       {
         title: eventData.title || "",
         description: eventData.description || undefined,

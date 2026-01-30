@@ -1,23 +1,36 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { ThreadList } from "@/components/inbox/ThreadList"
 import { ThreadViewer } from "@/components/inbox/ThreadViewer"
 import { AccountFilter } from "@/components/inbox/AccountFilter"
-import { Inbox, Settings, X, Menu, ChevronLeft, ChevronRight } from "lucide-react"
+import { EmailComposer } from "@/components/email/EmailComposer"
+import { Inbox, Settings, X, Menu, ChevronLeft, ChevronRight, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ResizablePanel, ResizableContainer } from "@/components/ui/resizable"
 
 export default function InboxPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const threadParam = searchParams.get("thread")
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(threadParam)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [selectedSplit, setSelectedSplit] = useState<string | null>("all") // "all" | "VIP" | "NEEDS_REPLY" | "WAITING" | "FINANCE" | "HIRING" | "STARTUP" | "NEWSLETTERS" | "RECEIPTS" | "FYI" | "OTHER"
   const [showSidebar, setShowSidebar] = useState(true)
   const [showThreadList, setShowThreadList] = useState(true)
+  const [showComposer, setShowComposer] = useState(false)
+
+  // Check for compose query param
+  useEffect(() => {
+    const composeParam = searchParams.get("compose")
+    if (composeParam === "true") {
+      setShowComposer(true)
+      // Clean up URL
+      router.replace("/dashboard/inbox")
+    }
+  }, [searchParams, router])
   
   // Store panel widths in localStorage for persistence
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -66,6 +79,14 @@ export default function InboxPage() {
           <h1 className="text-xl md:text-2xl font-bold text-text0 truncate">Inbox</h1>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            onClick={() => setShowComposer(true)}
+            className="bg-accentBlue hover:bg-accentBlue/90 text-bg0"
+            size="sm"
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            <span className="hidden md:inline">Compose</span>
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
@@ -243,6 +264,19 @@ export default function InboxPage() {
           <ThreadViewer threadId={selectedThreadId} />
         </div>
       </ResizableContainer>
+
+      {/* Email Composer */}
+      <EmailComposer
+        open={showComposer}
+        onClose={() => setShowComposer(false)}
+        onSent={() => {
+          setShowComposer(false)
+          // Thread list will auto-refresh via Firestore listener
+        }}
+        onDraftSaved={() => {
+          setShowComposer(false)
+        }}
+      />
     </div>
   )
 }

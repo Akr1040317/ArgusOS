@@ -65,14 +65,18 @@ Generate a ${tone} follow-up email that:
 - Uses the user's preferred signoff`
 
   try {
-    const response = await chatCompletion(
+    const response = await unifiedChatCompletion(
+      uid,
       [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      "gpt-4o-mini",
-      0.7,
-      600
+      {
+        feature: "follow_up_draft" as AIFeature,
+        model: "gpt-4o-mini",
+        temperature: 0.7,
+        maxTokens: 600,
+      }
     )
 
     // Parse the draft format: Subject: ... \n <body>

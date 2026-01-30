@@ -35,6 +35,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# firebase functions - contains secrets
+firebase/functions/set-env-vars.sh
+
 # firebase
 .firebase/
 firebase-debug.log
