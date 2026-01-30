@@ -20,6 +20,7 @@ export interface ChatResponse {
  * Process chat query with RAG retrieval
  */
 export async function processChatQuery(
+  uid: string | null,
   query: string,
   threads: RetrievedThread[],
   events: RetrievedEvent[]

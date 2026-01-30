@@ -66,6 +66,7 @@ export function AISettings() {
   })
   const [tokenUsage, setTokenUsage] = useState<any>(null)
   const [usageLoading, setUsageLoading] = useState(false)
+  const [tokenUsageDays, setTokenUsageDays] = useState(7)
 
   useEffect(() => {
     if (user) {
@@ -110,10 +111,13 @@ export function AISettings() {
 
       const data = await response.json()
       if (data.success) {
+        console.log("[AISettings] Token usage fetched:", data.usage)
         setTokenUsage(data.usage)
+      } else {
+        console.error("[AISettings] Failed to fetch token usage:", data.error)
       }
-    } catch (error) {
-      console.error("Error fetching token usage:", error)
+    } catch (error: any) {
+      console.error("[AISettings] Error fetching token usage:", error)
     } finally {
       setUsageLoading(false)
     }
@@ -121,6 +125,14 @@ export function AISettings() {
 
   const updateProviderKey = async (provider: AIProvider, apiKey: string) => {
     if (!user) return
+
+    const trimmedKey = apiKey.trim()
+    if (trimmedKey.length === 0) {
+      console.warn(`[AISettings] Empty API key provided for ${provider}`)
+      return
+    }
+
+    console.log(`[AISettings] Updating ${provider} API key, length: ${trimmedKey.length}, starts with: ${trimmedKey.substring(0, 5)}`)
 
     setSaving(true)
     try {
@@ -133,16 +145,21 @@ export function AISettings() {
         },
         body: JSON.stringify({
           provider,
-          apiKey,
+          apiKey: trimmedKey,
         }),
       })
 
       const data = await response.json()
       if (data.success) {
+        console.log(`[AISettings] Successfully updated ${provider} API key`)
         await fetchSettings()
+      } else {
+        console.error(`[AISettings] Failed to update API key:`, data.error)
+        alert(`Failed to save API key: ${data.error || "Unknown error"}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating API key:", error)
+      alert(`Error saving API key: ${error.message || "Unknown error"}`)
     } finally {
       setSaving(false)
     }
@@ -202,6 +219,17 @@ export function AISettings() {
             </div>
           ) : tokenUsage ? (
             <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-text2 text-sm">Last {tokenUsageDays} days</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchTokenUsage(tokenUsageDays)}
+                  className="h-7 text-xs"
+                >
+                  Refresh
+                </Button>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-lg border border-border-0 bg-bg1">
                   <p className="text-text2 text-sm">Total Tokens</p>
@@ -328,13 +356,24 @@ export function AISettings() {
                   <div className="flex gap-2">
                     <Input
                       type={showKeys[provider] ? "text" : "password"}
-                      value={hasKey ? "••••••••" : ""}
-                      placeholder={`Enter ${PROVIDER_NAMES[provider]} API key`}
-                      onChange={(e) => {
-                        const newKey = e.target.value
+                      defaultValue=""
+                      placeholder={hasKey ? "Paste new API key to update" : `Enter ${PROVIDER_NAMES[provider]} API key`}
+                      onBlur={(e) => {
+                        const input = e.target as HTMLInputElement
+                        const newKey = input?.value?.trim() || ""
                         if (newKey.length > 0) {
+                          console.log(`[AISettings] Updating ${provider} API key, length: ${newKey.length}`)
                           updateProviderKey(provider, newKey)
                         }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.currentTarget.blur()
+                        }
+                      }}
+                      onChange={(e) => {
+                        // Handle changes - save on blur or Enter
+                        // The actual save happens in onBlur
                       }}
                       className="flex-1"
                     />
@@ -352,6 +391,11 @@ export function AISettings() {
                       )}
                     </Button>
                   </div>
+                  {hasKey && (
+                    <p className="text-xs text-text2">
+                      API key is configured. Paste a new key above to update it.
+                    </p>
+                  )}
                 </div>
 
                 {providerConfig.defaultModel && (

@@ -1,8 +1,9 @@
-import { chatCompletion, parseJSONResponse } from "./client"
+import { unifiedChatCompletion, parseJSONResponse } from "./unifiedClient"
 import { getClassifyPrompt, getSummarizePrompt, getExtractPrompt, getDraftPrompt } from "./prompts"
 import { validateClassification, validateExtraction, ClassificationResult, ExtractionResult } from "./schemas"
 import { adminDb } from "@/lib/firebase/admin"
 import { FieldValue } from "firebase-admin/firestore"
+import { AIFeature } from "./providers/types"
 
 export interface ThreadData {
   subject: string
@@ -95,7 +96,7 @@ export async function classifyThread(
 /**
  * Summarize a thread using AI
  */
-export async function summarizeThread(thread: ThreadData): Promise<{
+export async function summarizeThread(uid: string | null, thread: ThreadData): Promise<{
   bullets: string[]
   ask: string
   openLoops: string[]
@@ -205,18 +206,24 @@ export async function extractActions(uid: string | null, thread: ThreadData): Pr
   userPrompt = userPrompt.replace("{thread}", JSON.stringify(threadData))
 
   try {
-    const response = await chatCompletion(
+    const response = await unifiedChatCompletion(
+      uid,
       [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      "gpt-4o-mini",
-      0.2,
-      1000
+      {
+        feature: "extraction" as AIFeature,
+        model: "gpt-4o-mini",
+        temperature: 0.2,
+        maxTokens: 1000,
+      }
     )
 
     const result = await parseJSONResponse<ExtractionResult>(
+      uid,
       response,
+      "extraction" as AIFeature,
       "Fix the JSON. Return only valid JSON with keys: extractedAsk, openLoops, deadlines, tasks"
     )
 
@@ -280,14 +287,18 @@ export async function generateDraft(
   userPrompt = userPrompt.replace("{desiredTone}", tone)
 
   try {
-    const response = await chatCompletion(
+    const response = await unifiedChatCompletion(
+      uid,
       [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      "gpt-4o-mini", // Using fast model for drafts
-      0.7, // Higher temperature for more natural language
-      800 // Reduced max tokens for faster generation (drafts should be concise)
+      {
+        feature: "draft_generation" as AIFeature,
+        model: "gpt-4o-mini", // Using fast model for drafts
+        temperature: 0.7, // Higher temperature for more natural language
+        maxTokens: 800, // Reduced max tokens for faster generation (drafts should be concise)
+      }
     )
 
     // Parse the draft format: Subject: ... \n <body>

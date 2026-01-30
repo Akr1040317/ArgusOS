@@ -1,4 +1,5 @@
-import { chatCompletion } from "./client"
+import { unifiedChatCompletion } from "./unifiedClient"
+import { AIFeature } from "./providers/types"
 
 export interface FollowUpDraft {
   subject: string
@@ -20,6 +21,7 @@ export interface EventData {
  * Generate a follow-up email draft after a meeting
  */
 export async function generateFollowUpDraft(
+  uid: string | null,
   event: EventData,
   userStyle?: {
     name: string

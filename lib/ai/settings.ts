@@ -82,12 +82,28 @@ export async function getAISettings(uid: string): Promise<AISettings> {
     }
 
     // Merge with defaults to ensure all fields exist
+    // Important: Preserve user's API keys even if they're set
+    const mergedProviders: Record<AIProvider, AIProviderConfig> = {
+      ...DEFAULT_SETTINGS.providers,
+    }
+    
+    // Merge user's provider configs, preserving their API keys
+    Object.entries(aiSettings.providers || {}).forEach(([key, userConfig]: [string, any]) => {
+      if (userConfig && typeof userConfig === 'object') {
+        mergedProviders[key as AIProvider] = {
+          ...mergedProviders[key as AIProvider],
+          ...userConfig,
+          // Preserve API key if user has set one (even if empty string, use it)
+          apiKey: userConfig.apiKey !== undefined ? userConfig.apiKey : mergedProviders[key as AIProvider].apiKey,
+          // Preserve enabled status
+          enabled: userConfig.enabled !== undefined ? userConfig.enabled : (userConfig.apiKey && userConfig.apiKey.length > 0),
+        }
+      }
+    })
+    
     return {
       defaultProvider: aiSettings.defaultProvider || DEFAULT_SETTINGS.defaultProvider,
-      providers: {
-        ...DEFAULT_SETTINGS.providers,
-        ...aiSettings.providers,
-      },
+      providers: mergedProviders,
       featureToggles: {
         ...DEFAULT_SETTINGS.featureToggles,
         ...aiSettings.featureToggles,
@@ -153,8 +169,8 @@ export async function updateProviderKey(
   const settings = await getAISettings(uid)
   settings.providers[provider] = {
     ...settings.providers[provider],
-    apiKey,
-    enabled: apiKey.length > 0,
+    apiKey: apiKey.trim(), // Trim whitespace
+    enabled: apiKey.trim().length > 0,
   }
   await updateAISettings(uid, settings)
 }

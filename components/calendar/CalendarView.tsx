@@ -167,11 +167,17 @@ export function CalendarView() {
         }
       }
 
-      // Sort by start date
-      allEvents.sort((a, b) => new Date(a.startISO).getTime() - new Date(b.startISO).getTime())
+      // Filter by selected account if specified
+      let filteredEvents = allEvents
+      if (selectedAccountId) {
+        filteredEvents = allEvents.filter((event) => event.accountId === selectedAccountId)
+      }
 
-      console.log(`Fetched ${allEvents.length} events from Google Calendar${selectedAccountId ? ` (filtered by account)` : ""}`)
-      setEvents(allEvents)
+      // Sort by start date
+      filteredEvents.sort((a, b) => new Date(a.startISO).getTime() - new Date(b.startISO).getTime())
+
+      console.log(`Fetched ${filteredEvents.length} events from Google Calendar${selectedAccountId ? ` (filtered by account)` : ""}`)
+      setEvents(filteredEvents)
       setLoading(false)
     } catch (error) {
       console.error("Error fetching calendar events:", error)

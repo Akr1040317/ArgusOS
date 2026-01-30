@@ -1,4 +1,5 @@
-import { chatCompletion } from "./client"
+import { unifiedChatCompletion } from "./unifiedClient"
+import { AIFeature } from "./providers/types"
 
 export interface PrepPack {
   contextSummary: string
@@ -21,6 +22,7 @@ export interface EventData {
  * Generate a prep pack for an upcoming event
  */
 export async function generatePrepPack(
+  uid: string | null,
   event: EventData,
   relatedThreads: Array<{ id: string; subject: string; participants: Array<{ email: string }> }> = []
 ): Promise<PrepPack> {

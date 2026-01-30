@@ -109,61 +109,69 @@ export function CommandCenter() {
     <div className="space-y-6">
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-accentBlue/20 to-accentBlue/5 border-accentBlue/30">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-text2 mb-1">New Important</p>
-                <p className="text-3xl font-bold text-text0">{latestDigest.importantNew.length}</p>
+        <Link href="/dashboard/inbox">
+          <Card className="bg-gradient-to-br from-accentBlue/20 to-accentBlue/5 border-accentBlue/30 hover:border-accentBlue/50 transition-all cursor-pointer">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-text2 mb-1">New Important</p>
+                  <p className="text-3xl font-bold text-text0">{latestDigest.importantNew.length}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-accentBlue/20 flex items-center justify-center">
+                  <Mail className="h-6 w-6 text-accentBlue" />
+                </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-accentBlue/20 flex items-center justify-center">
-                <Mail className="h-6 w-6 text-accentBlue" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="bg-gradient-to-br from-red-500/20 to-red-500/5 border-red-500/30">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-text2 mb-1">Overdue Replies</p>
-                <p className="text-3xl font-bold text-text0">{latestDigest.needsReplyOverdue.length}</p>
+        <Link href="/dashboard/inbox?filter=overdue">
+          <Card className="bg-gradient-to-br from-red-500/20 to-red-500/5 border-red-500/30 hover:border-red-500/50 transition-all cursor-pointer">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-text2 mb-1">Overdue Replies</p>
+                  <p className="text-3xl font-bold text-text0">{latestDigest.needsReplyOverdue.length}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-red-400" />
+                </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-red-500/20 flex items-center justify-center">
-                <AlertCircle className="h-6 w-6 text-red-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="bg-gradient-to-br from-orange-500/20 to-orange-500/5 border-orange-500/30">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-text2 mb-1">Follow-ups Due</p>
-                <p className="text-3xl font-bold text-text0">{latestDigest.followUpsDue.length}</p>
+        <Link href="/dashboard/inbox?filter=followup">
+          <Card className="bg-gradient-to-br from-orange-500/20 to-orange-500/5 border-orange-500/30 hover:border-orange-500/50 transition-all cursor-pointer">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-text2 mb-1">Follow-ups Due</p>
+                  <p className="text-3xl font-bold text-text0">{latestDigest.followUpsDue.length}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-orange-400" />
+                </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-orange-500/20 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-orange-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="bg-gradient-to-br from-accentPurple/20 to-accentPurple/5 border-accentPurple/30">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-text2 mb-1">Upcoming Meetings</p>
-                <p className="text-3xl font-bold text-text0">{latestDigest.upcomingMeetings.length}</p>
+        <Link href="/dashboard/calendar">
+          <Card className="bg-gradient-to-br from-accentPurple/20 to-accentPurple/5 border-accentPurple/30 hover:border-accentPurple/50 transition-all cursor-pointer">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-text2 mb-1">Upcoming Meetings</p>
+                  <p className="text-3xl font-bold text-text0">{latestDigest.upcomingMeetings.length}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-accentPurple/20 flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-accentPurple" />
+                </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-accentPurple/20 flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-accentPurple" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Attention Banner */}

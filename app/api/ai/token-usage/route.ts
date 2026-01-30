@@ -23,11 +23,20 @@ export async function GET(request: NextRequest) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
+    console.log(`[TokenUsage API] Fetching usage for ${uid} from ${startDate.toISOString()} to ${endDate.toISOString()}`)
+
     const usage = await getTokenUsage(uid, startDate, endDate)
+
+    console.log(`[TokenUsage API] Retrieved usage for ${uid}:`, {
+      totalTokens: usage.totalTokens,
+      totalCost: usage.totalCost,
+      features: Object.keys(usage.byFeature).length,
+      providers: Object.keys(usage.byProvider).length,
+    })
 
     return NextResponse.json({ success: true, usage })
   } catch (error: any) {
-    console.error("Error getting token usage:", error)
+    console.error("[TokenUsage API] Error getting token usage:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

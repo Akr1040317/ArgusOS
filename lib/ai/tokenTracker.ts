@@ -10,6 +10,14 @@ export async function trackTokenUsage(
   usage: TokenUsage
 ): Promise<void> {
   try {
+    console.log(`[TokenTracker] Tracking usage for ${uid}:`, {
+      feature: usage.feature,
+      provider: usage.provider,
+      model: usage.model,
+      totalTokens: usage.totalTokens,
+      cost: usage.cost,
+    })
+
     // Store individual usage record
     await adminDb
       .collection("tokenUsage")
@@ -62,8 +70,16 @@ export async function trackTokenUsage(
     dailyData.byProvider[providerKey].count += 1
 
     await dailyRef.set(dailyData, { merge: true })
-  } catch (error) {
-    console.error("Error tracking token usage:", error)
+    
+    console.log(`[TokenTracker] Successfully tracked ${usage.totalTokens} tokens for ${uid} (${usage.feature})`)
+  } catch (error: any) {
+    console.error("[TokenTracker] Error tracking token usage:", error)
+    console.error("[TokenTracker] Error details:", {
+      message: error.message,
+      stack: error.stack,
+      uid,
+      usage,
+    })
     // Don't throw - token tracking shouldn't break the main flow
   }
 }

@@ -2,7 +2,11 @@ import OpenAI from "openai"
 import { ChatMessage, ChatCompletionOptions, ChatCompletionResult, TokenUsage } from "./types"
 
 export async function createOpenAIClient(apiKey: string): Promise<OpenAI> {
-  return new OpenAI({ apiKey })
+  const trimmedKey = apiKey.trim()
+  if (!trimmedKey || trimmedKey.length < 20) {
+    throw new Error("Invalid OpenAI API key format")
+  }
+  return new OpenAI({ apiKey: trimmedKey })
 }
 
 export async function openaiCompletion(
@@ -24,18 +28,27 @@ export async function openaiCompletion(
   })
 
   // Race between API call and timeout
-  const response = await Promise.race([
-    client.chat.completions.create({
-      model,
-      messages: messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      })),
-      temperature,
-      max_tokens: maxTokens,
-    }),
-    timeoutPromise,
-  ])
+  let response
+  try {
+    response = await Promise.race([
+      client.chat.completions.create({
+        model,
+        messages: messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+        temperature,
+        max_tokens: maxTokens,
+      }),
+      timeoutPromise,
+    ])
+  } catch (apiError: any) {
+    // Check for API key errors
+    if (apiError?.status === 401 || apiError?.message?.includes("API key") || apiError?.message?.includes("Incorrect API key")) {
+      throw new Error(`Invalid OpenAI API key. Please check your AI settings and ensure your API key is correct.`)
+    }
+    throw apiError
+  }
 
   const content = response.choices[0]?.message?.content
   if (!content) {

@@ -20,7 +20,10 @@ export async function unifiedChatCompletion(
   options: ChatCompletionOptions
 ): Promise<string> {
   // Backward compatibility: if no uid, use environment variables
+  // NOTE: This path doesn't track tokens since we don't have a uid
+  // All new code should provide a uid for proper token tracking
   if (!uid) {
+    console.warn(`[UnifiedClient] WARNING: AI call made without uid - token usage will NOT be tracked! Feature: ${options.feature}`)
     if (!fallbackOpenAI) {
       throw new Error("No API key configured and no user ID provided")
     }
@@ -34,6 +37,27 @@ export async function unifiedChatCompletion(
       temperature: options.temperature || 0.3,
       max_tokens: options.maxTokens,
     })
+    
+    // Try to track tokens even without uid (using a system-wide tracking)
+    // This is a fallback for legacy code
+    if (response.usage) {
+      try {
+        const usage = {
+          promptTokens: response.usage.prompt_tokens || 0,
+          completionTokens: response.usage.completion_tokens || 0,
+          totalTokens: response.usage.total_tokens || 0,
+          feature: options.feature,
+          provider: "openai" as const,
+          model,
+          timestamp: new Date(),
+          cost: 0, // Can't calculate cost without proper pricing function
+        }
+        console.warn(`[UnifiedClient] Token usage (not tracked):`, usage)
+      } catch (e) {
+        // Ignore tracking errors in fallback path
+      }
+    }
+    
     return response.choices[0]?.message?.content || ""
   }
   const settings = await getAISettings(uid)
@@ -55,17 +79,49 @@ export async function unifiedChatCompletion(
   const provider = modelPref.provider
   const providerConfig = settings.providers[provider]
 
-  if (!providerConfig.enabled || !providerConfig.apiKey) {
-    throw new Error(`Provider ${provider} is not configured or enabled`)
+  console.log(`[UnifiedClient] Provider config for ${provider}:`, {
+    enabled: providerConfig.enabled,
+    hasApiKey: !!providerConfig.apiKey,
+    apiKeyLength: providerConfig.apiKey?.length || 0,
+    apiKeyPrefix: providerConfig.apiKey?.substring(0, 10) || "none",
+  })
+
+  if (!providerConfig.enabled) {
+    throw new Error(`Provider ${provider} is not enabled. Please enable it in Settings → AI Settings.`)
+  }
+
+  if (!providerConfig.apiKey || providerConfig.apiKey.trim().length === 0) {
+    throw new Error(`API key for ${provider} is not configured. Please add your API key in Settings → AI Settings.`)
+  }
+
+  // Validate API key format (basic check)
+  const trimmedKey = providerConfig.apiKey.trim()
+  if (trimmedKey.length < 20) {
+    throw new Error(`Invalid API key format for ${provider}. API keys should be longer than 20 characters. Please check your AI settings.`)
+  }
+  
+  // For OpenAI, check if it starts with sk-
+  if (provider === "openai" && !trimmedKey.startsWith("sk-")) {
+    console.warn(`[UnifiedClient] OpenAI API key doesn't start with 'sk-'. This might be invalid.`)
   }
 
   // Use model from preferences or fallback to options
   const model = options.model || modelPref.model || providerConfig.defaultModel
 
   try {
+    console.log(`[UnifiedClient] Making AI call for ${uid}:`, {
+      feature: options.feature,
+      provider,
+      model,
+      messageCount: messages.length,
+    })
+
+    // Trim the API key before using it
+    const trimmedApiKey = providerConfig.apiKey.trim()
+    
     const result: ChatCompletionResult = await providerChatCompletion(
       provider,
-      providerConfig.apiKey,
+      trimmedApiKey,
       messages,
       {
         ...options,
@@ -73,12 +129,24 @@ export async function unifiedChatCompletion(
       }
     )
 
+    console.log(`[UnifiedClient] AI call completed for ${uid}:`, {
+      feature: options.feature,
+      tokens: result.usage.totalTokens,
+      cost: result.usage.cost,
+    })
+
     // Track token usage
-    await trackTokenUsage(uid, result.usage)
+    try {
+      await trackTokenUsage(uid, result.usage)
+      console.log(`[UnifiedClient] Token usage tracked successfully for ${uid}`)
+    } catch (trackError: any) {
+      console.error(`[UnifiedClient] Failed to track token usage for ${uid}:`, trackError)
+      // Don't throw - token tracking failure shouldn't break the main flow
+    }
 
     return result.content
   } catch (error: any) {
-    console.error(`AI completion error (${provider}/${model}):`, error)
+    console.error(`[UnifiedClient] AI completion error (${provider}/${model}):`, error)
     throw error
   }
 }
