@@ -75,6 +75,7 @@ export function ChatInterface() {
     }
 
     loadSessions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   // Load messages for current session
@@ -338,7 +339,7 @@ export function ChatInterface() {
                 <div className="text-center max-w-md">
                   <h3 className="text-xl font-semibold text-text0 mb-2">Start a conversation</h3>
                   <p className="text-text2 text-sm mb-4">
-                    Ask questions about your emails and calendar. Try: "What did I miss today?" or "Show me my upcoming meetings"
+                    Ask questions about your emails and calendar. Try: &quot;What did I miss today?&quot; or &quot;Show me my upcoming meetings&quot;
                   </p>
                 </div>
               </div>

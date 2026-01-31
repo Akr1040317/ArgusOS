@@ -56,6 +56,7 @@ export function EmailComposer({
       setSubject(initialSubject)
       setBody(initialBody)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user, initialTo, initialSubject, initialBody])
 
   const fetchGmailAccounts = async () => {

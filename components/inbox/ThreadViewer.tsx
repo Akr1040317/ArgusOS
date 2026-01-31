@@ -685,7 +685,7 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
             ) : (
               <div className="text-center text-text2 py-8">
                 <p>No draft available</p>
-                <p className="text-xs mt-2">This thread doesn't need a reply or draft generation is not applicable</p>
+                <p className="text-xs mt-2">This thread doesn&apos;t need a reply or draft generation is not applicable</p>
               </div>
             )}
           </div>

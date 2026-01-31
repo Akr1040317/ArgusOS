@@ -120,7 +120,7 @@ export function Metrics() {
       <CardHeader>
         <CardTitle className="text-text0 text-sm flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-accentBlue" />
-          Today's Activity
+          Today&apos;s Activity
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

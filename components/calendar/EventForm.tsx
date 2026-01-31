@@ -91,6 +91,7 @@ export function EventForm({
         setEndTime(format(end, "HH:mm"))
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user, initialData])
 
   const fetchCalendarAccounts = async () => {
@@ -149,6 +150,7 @@ export function EventForm({
     if (selectedAccount) {
       fetchCalendars(selectedAccount)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount])
 
   const addAttendee = () => {

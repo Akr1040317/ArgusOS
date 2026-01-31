@@ -19,7 +19,7 @@ export default function InboxPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [selectedSplit, setSelectedSplit] = useState<string | null>("all") // "all" | "VIP" | "NEEDS_REPLY" | "WAITING" | "FINANCE" | "HIRING" | "STARTUP" | "NEWSLETTERS" | "RECEIPTS" | "FYI" | "OTHER"
   const [showSidebar, setShowSidebar] = useState(true)
-  const [showThreadList, setShowThreadList] = useState(true)
+  const [showThreadList, setShowThreadList] = useState(true) // Keep thread list visible by default
   const [showComposer, setShowComposer] = useState(false)
 
   // Check for compose query param
@@ -189,40 +189,23 @@ export default function InboxPage() {
         )}
 
         {/* Center: Thread List */}
-        {showThreadList ? (
-          <ResizablePanel
-            defaultWidth={threadListWidth}
-            minWidth={250}
-            maxWidth={600}
-            onResize={setThreadListWidth}
-            className={cn(
-              "border-r border-border-0 bg-bg0 flex flex-col overflow-hidden",
-              selectedThreadId && "hidden md:flex"
-            )}
-          >
-            <ThreadList 
-              onThreadSelect={(id) => {
-                setSelectedThreadId(id)
-                setShowThreadList(false)
-              }} 
-              selectedThreadId={selectedThreadId || undefined}
-              accountIdFilter={selectedAccountId}
-              splitFilter={selectedSplit === "all" ? null : selectedSplit}
-            />
-          </ResizablePanel>
-        ) : selectedThreadId ? (
-          <div className="flex items-center border-r border-border-0 bg-bg0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowThreadList(true)}
-              className="h-full px-2"
-              title="Show thread list"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : null}
+        <ResizablePanel
+          defaultWidth={threadListWidth}
+          minWidth={200}
+          maxWidth={400}
+          onResize={setThreadListWidth}
+          className="border-r border-border-0 bg-bg0 flex flex-col overflow-hidden"
+        >
+          <ThreadList 
+            onThreadSelect={(id) => {
+              setSelectedThreadId(id)
+              // Keep thread list visible - don't hide it
+            }} 
+            selectedThreadId={selectedThreadId || undefined}
+            accountIdFilter={selectedAccountId}
+            splitFilter={selectedSplit === "all" ? null : selectedSplit}
+          />
+        </ResizablePanel>
 
         {/* Right: Thread Viewer */}
         <div className={cn(
@@ -245,20 +228,6 @@ export default function InboxPage() {
                   Back
                 </Button>
               </div>
-              {!showThreadList && (
-                <div className="hidden md:flex items-center p-2 border-b border-border-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowThreadList(true)}
-                    className="h-8"
-                    title="Show thread list"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Threads
-                  </Button>
-                </div>
-              )}
             </>
           )}
           <ThreadViewer threadId={selectedThreadId} />

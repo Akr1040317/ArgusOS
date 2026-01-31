@@ -58,6 +58,7 @@ export async function classifyThread(
   userPrompt = userPrompt.replace("{thread}", JSON.stringify(threadData))
 
   try {
+    console.log(`[ClassifyThread] Starting classification for thread with subject: ${thread.subject}`)
     const response = await unifiedChatCompletion(
       uid,
       [
@@ -71,6 +72,7 @@ export async function classifyThread(
         maxTokens: 500,
       }
     )
+    console.log(`[ClassifyThread] Got response, length: ${response.length}`)
 
     const result = await parseJSONResponse<ClassificationResult>(
       uid,
@@ -123,6 +125,7 @@ export async function summarizeThread(uid: string | null, thread: ThreadData): P
   userPrompt = userPrompt.replace("{thread}", JSON.stringify(threadData))
 
   try {
+    console.log(`[SummarizeThread] Starting summarization for thread with subject: ${thread.subject}`)
     const response = await unifiedChatCompletion(
       uid,
       [
@@ -136,6 +139,7 @@ export async function summarizeThread(uid: string | null, thread: ThreadData): P
         maxTokens: 800,
       }
     )
+    console.log(`[SummarizeThread] Got response, length: ${response.length}`)
 
     // Parse the summary format: bullets, Ask:, Open loops:
     const lines = response.split("\n").filter((l) => l.trim())
@@ -172,7 +176,11 @@ export async function summarizeThread(uid: string | null, thread: ThreadData): P
       openLoops: openLoops.length > 0 ? openLoops : [],
     }
   } catch (error: any) {
-    console.error("Summarization error:", error)
+    console.error(`[SummarizeThread] Summarization error for thread "${thread.subject}":`, {
+      error: error.message,
+      stack: error.stack,
+      uid: uid || "null",
+    })
     return {
       bullets: [thread.snippet.substring(0, 200)],
       ask: "",
@@ -206,6 +214,7 @@ export async function extractActions(uid: string | null, thread: ThreadData): Pr
   userPrompt = userPrompt.replace("{thread}", JSON.stringify(threadData))
 
   try {
+    console.log(`[ExtractActions] Starting extraction for thread with subject: ${thread.subject}`)
     const response = await unifiedChatCompletion(
       uid,
       [
@@ -219,6 +228,7 @@ export async function extractActions(uid: string | null, thread: ThreadData): Pr
         maxTokens: 1000,
       }
     )
+    console.log(`[ExtractActions] Got response, length: ${response.length}`)
 
     const result = await parseJSONResponse<ExtractionResult>(
       uid,
@@ -229,7 +239,11 @@ export async function extractActions(uid: string | null, thread: ThreadData): Pr
 
     return validateExtraction(result)
   } catch (error: any) {
-    console.error("Extraction error:", error)
+    console.error(`[ExtractActions] Extraction error for thread "${thread.subject}":`, {
+      error: error.message,
+      stack: error.stack,
+      uid: uid || "null",
+    })
     return {
       extractedAsk: "",
       openLoops: [],
@@ -330,6 +344,7 @@ export async function runAIPipeline(
   userProfile?: UserProfile,
   importanceThreshold: number = 0.7
 ): Promise<void> {
+  console.log(`[AIPipeline] Starting pipeline for thread ${threadId}, uid: ${uid}`)
   try {
     // Fetch user preferences for threshold and style
     const userDoc = await adminDb.collection("users").doc(uid).get()
@@ -337,17 +352,40 @@ export async function runAIPipeline(
     const threshold = userData?.preferences?.importantThreshold || importanceThreshold
     const userStyle = userData?.styleProfile
 
+    console.log(`[AIPipeline] Running classification, summarization, and extraction in parallel for thread ${threadId}`)
     // Run all AI steps in parallel for speed
     const [classification, summarization, extraction] = await Promise.all([
-      classifyThread(uid, thread, userProfile),
-      summarizeThread(uid, thread),
-      extractActions(uid, thread),
+      classifyThread(uid, thread, userProfile).catch((err) => {
+        console.error(`[AIPipeline] Classification failed for thread ${threadId}:`, err)
+        throw err
+      }),
+      summarizeThread(uid, thread).catch((err) => {
+        console.error(`[AIPipeline] Summarization failed for thread ${threadId}:`, err)
+        throw err
+      }),
+      extractActions(uid, thread).catch((err) => {
+        console.error(`[AIPipeline] Extraction failed for thread ${threadId}:`, err)
+        throw err
+      }),
     ])
+
+    console.log(`[AIPipeline] AI steps completed for thread ${threadId}:`, {
+      classification: { priority: classification.priority, status: classification.status, importanceScore: classification.importanceScore },
+      summarization: { bulletsCount: summarization.bullets?.length || 0, hasAsk: !!summarization.ask },
+      extraction: { deadlinesCount: extraction.deadlines?.length || 0, tasksCount: extraction.tasks?.length || 0 },
+    })
 
     // Check if we should generate a draft
     const shouldGenerateDraft =
       classification.importanceScore >= threshold &&
       classification.status === "NEEDS_REPLY"
+
+    console.log(`[AIPipeline] Draft generation check for thread ${threadId}:`, {
+      shouldGenerateDraft,
+      importanceScore: classification.importanceScore,
+      threshold,
+      status: classification.status,
+    })
 
     let draftResult: { subject: string; body: string } | null = null
     let draftState: "READY" | "FAILED" | "NONE" = "NONE"
@@ -355,13 +393,17 @@ export async function runAIPipeline(
 
     if (shouldGenerateDraft) {
       try {
+        console.log(`[AIPipeline] Generating draft for thread ${threadId}`)
         draftResult = await generateDraft(uid, thread, "concise", userStyle)
         draftState = "READY"
+        console.log(`[AIPipeline] Draft generated successfully for thread ${threadId}`)
       } catch (error: any) {
-        console.error("Draft generation failed:", error)
+        console.error(`[AIPipeline] Draft generation failed for thread ${threadId}:`, error)
         draftState = "FAILED"
         draftError = error.message
       }
+    } else {
+      console.log(`[AIPipeline] Skipping draft generation for thread ${threadId} (not important enough or doesn't need reply)`)
     }
 
     // Update thread document with AI results
@@ -420,7 +462,12 @@ export async function runAIPipeline(
       `Classification, summarization, extraction completed${draftState === "READY" ? ", draft generated" : ""}`
     )
   } catch (error: any) {
-    console.error("AI pipeline error:", error)
+    console.error(`[AIPipeline] CRITICAL ERROR: Pipeline failed for thread ${threadId}, uid: ${uid}:`, {
+      error: error.message,
+      stack: error.stack,
+      threadId,
+      uid,
+    })
     await logAudit(uid, "AI_PIPELINE", threadId, false, error.message)
     throw error
   }

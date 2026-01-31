@@ -491,7 +491,7 @@ export default function LandingPage() {
             <CardHeader>
               <CardTitle className="text-4xl font-bold mb-4">Ready to Transform Your Inbox?</CardTitle>
               <CardDescription className="text-xl text-text1">
-                Join thousands of professionals who've reclaimed their time with ArgusOS
+                Join thousands of professionals who&apos;ve reclaimed their time with ArgusOS
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-8">

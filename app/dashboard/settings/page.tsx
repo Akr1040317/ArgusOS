@@ -57,6 +57,7 @@ export default function SettingsPage() {
         router.replace("/dashboard/settings")
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   const fetchGmailAccounts = async () => {
@@ -636,7 +637,7 @@ export default function SettingsPage() {
               ) : (
                 <>
                   <Play className="h-4 w-4 mr-2" />
-                  Process Today's Emails
+                  Process Today&apos;s Emails
                 </>
               )}
             </Button>

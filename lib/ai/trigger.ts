@@ -66,11 +66,22 @@ export async function triggerAIPipeline(
     }
 
     // Run AI pipeline (non-blocking)
+    console.log(`[AITrigger] Triggering AI pipeline for thread ${threadId}, uid: ${uid}`)
     runAIPipeline(uid, threadId, thread, userProfile).catch((error) => {
-      console.error(`AI pipeline failed for thread ${threadId}:`, error)
+      console.error(`[AITrigger] AI pipeline failed for thread ${threadId}, uid: ${uid}:`, {
+        error: error.message,
+        stack: error.stack,
+        threadId,
+        uid,
+      })
     })
-  } catch (error) {
-    console.error(`Failed to trigger AI pipeline for thread ${threadId}:`, error)
+  } catch (error: any) {
+    console.error(`[AITrigger] Failed to trigger AI pipeline for thread ${threadId}, uid: ${uid}:`, {
+      error: error.message,
+      stack: error.stack,
+      threadId,
+      uid,
+    })
     // Don't throw - we don't want to break sync/ingest if AI fails
   }
 }

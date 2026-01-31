@@ -98,7 +98,7 @@ export function TodaysFocus() {
     return (
       <Card className="bg-panel border-border-0">
         <CardHeader>
-          <CardTitle className="text-text0">Today's Focus</CardTitle>
+          <CardTitle className="text-text0">Today&apos;s Focus</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-text2 text-sm">Loading...</div>
@@ -113,7 +113,7 @@ export function TodaysFocus() {
     return (
       <Card className="bg-panel border-border-0">
         <CardHeader>
-          <CardTitle className="text-text0">Today's Focus</CardTitle>
+          <CardTitle className="text-text0">Today&apos;s Focus</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
@@ -133,7 +133,7 @@ export function TodaysFocus() {
       <CardHeader>
         <CardTitle className="text-text0 flex items-center gap-2">
           <Clock className="h-5 w-5 text-accentBlue" />
-          Today's Focus
+          Today&apos;s Focus
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
