@@ -1,7 +1,7 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app"
-import { getAnalytics, Analytics } from "firebase/analytics"
-import { getAuth, Auth } from "firebase/auth"
-import { getFirestore, Firestore } from "firebase/firestore"
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app"
+import { getAnalytics, type Analytics } from "firebase/analytics"
+import { getAuth, type Auth } from "firebase/auth"
+import { getFirestore, type Firestore } from "firebase/firestore"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -20,7 +20,7 @@ const hasFirebaseConfig = Boolean(
     firebaseConfig.appId
 )
 
-function getFirebaseApp(): FirebaseApp {
+function createFirebaseApp(): FirebaseApp {
   if (!hasFirebaseConfig) {
     throw new Error(
       "Firebase is not configured. Set NEXT_PUBLIC_FIREBASE_* environment variables."
@@ -34,54 +34,20 @@ function getFirebaseApp(): FirebaseApp {
   return initializeApp(firebaseConfig)
 }
 
-let app: FirebaseApp | null = null
-let authInstance: Auth | null = null
-let dbInstance: Firestore | null = null
-let analyticsInstance: Analytics | null = null
+// Real Firebase instances are required. Firestore rejects Proxy objects in collection()/doc().
+const app = hasFirebaseConfig ? createFirebaseApp() : (null as unknown as FirebaseApp)
 
-function ensureApp(): FirebaseApp {
-  if (!app) {
-    app = getFirebaseApp()
-  }
-  return app
-}
+export const auth: Auth = hasFirebaseConfig
+  ? getAuth(app)
+  : (null as unknown as Auth)
 
-export const auth: Auth = new Proxy({} as Auth, {
-  get(_target, prop, receiver) {
-    if (!authInstance) {
-      authInstance = getAuth(ensureApp())
-    }
-    const value = Reflect.get(authInstance as object, prop, receiver)
-    return typeof value === "function" ? value.bind(authInstance) : value
-  },
-})
+export const db: Firestore = hasFirebaseConfig
+  ? getFirestore(app)
+  : (null as unknown as Firestore)
 
-export const db: Firestore = new Proxy({} as Firestore, {
-  get(_target, prop, receiver) {
-    if (!dbInstance) {
-      dbInstance = getFirestore(ensureApp())
-    }
-    const value = Reflect.get(dbInstance as object, prop, receiver)
-    return typeof value === "function" ? value.bind(dbInstance) : value
-  },
-})
-
-export const analytics =
+export const analytics: Analytics | null =
   typeof window !== "undefined" && hasFirebaseConfig
-    ? (() => {
-        try {
-          analyticsInstance = getAnalytics(ensureApp())
-          return analyticsInstance
-        } catch {
-          return null
-        }
-      })()
+    ? getAnalytics(app)
     : null
 
-export default new Proxy({} as FirebaseApp, {
-  get(_target, prop, receiver) {
-    const instance = ensureApp()
-    const value = Reflect.get(instance as object, prop, receiver)
-    return typeof value === "function" ? value.bind(instance) : value
-  },
-})
+export default app
