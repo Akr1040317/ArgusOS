@@ -62,7 +62,9 @@ export class GmailClient {
     })
 
     return {
-      threads: response.data.threads || [],
+      threads: (response.data.threads || [])
+        .filter((thread): thread is typeof thread & { id: string } => Boolean(thread.id))
+        .map((thread) => ({ id: thread.id })),
       nextPageToken: response.data.nextPageToken || undefined,
     }
   }

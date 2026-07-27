@@ -38,10 +38,21 @@ export async function findRelatedThreads(
     .limit(100) // Fetch more to filter
     .get()
 
-  const threads = threadsSnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }))
+  const threads = threadsSnapshot.docs.map((doc) => {
+    const data = doc.data() as {
+      participants?: Array<{ email: string }>
+      subject?: string
+      snippet?: string
+      lastMessageAt?: string
+    }
+    return {
+      id: doc.id,
+      participants: data.participants || [],
+      subject: data.subject || "",
+      snippet: data.snippet || "",
+      lastMessageAt: data.lastMessageAt || "",
+    }
+  })
 
   // Score threads by relevance
   const scoredThreads = threads.map((thread) => {

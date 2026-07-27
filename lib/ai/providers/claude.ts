@@ -1,17 +1,7 @@
+import Anthropic from "@anthropic-ai/sdk"
 import { ChatMessage, ChatCompletionOptions, ChatCompletionResult, TokenUsage } from "./types"
 
-// Lazy import to avoid errors if package not installed
-let Anthropic: any = null
-try {
-  Anthropic = require("@anthropic-ai/sdk").default
-} catch {
-  // Package not installed
-}
-
-export function createClaudeClient(apiKey: string): any {
-  if (!Anthropic) {
-    throw new Error("@anthropic-ai/sdk package not installed. Run: npm install @anthropic-ai/sdk")
-  }
+export function createClaudeClient(apiKey: string): Anthropic {
   return new Anthropic({ apiKey })
 }
 

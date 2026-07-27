@@ -4,6 +4,8 @@ import { createGeminiClient, geminiCompletion } from "./gemini"
 import { createClaudeClient, claudeCompletion } from "./claude"
 import { createPerplexityClient, perplexityCompletion } from "./perplexity"
 import OpenAI from "openai"
+import Anthropic from "@anthropic-ai/sdk"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
 type ProviderClient = OpenAI | GoogleGenerativeAI | Anthropic | { apiKey: string }
 
@@ -57,9 +59,9 @@ export async function chatCompletion(
     case "openai":
       return openaiCompletion(client as OpenAI, messages, options)
     case "gemini":
-      return geminiCompletion(client, messages, options)
+      return geminiCompletion(client as GoogleGenerativeAI, messages, options)
     case "claude":
-      return claudeCompletion(client, messages, options)
+      return claudeCompletion(client as Anthropic, messages, options)
     case "perplexity":
       return perplexityCompletion(client as { apiKey: string }, messages, options)
     default:

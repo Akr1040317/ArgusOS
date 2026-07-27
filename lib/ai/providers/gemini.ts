@@ -1,19 +1,9 @@
+import { GoogleGenerativeAI } from "@google/generative-ai"
 import { ChatMessage, ChatCompletionOptions, ChatCompletionResult, TokenUsage } from "./types"
 
-// Lazy import to avoid errors if package not installed
-let GoogleGenerativeAI: any = null
-try {
-  GoogleGenerativeAI = require("@google/generative-ai").GoogleGenerativeAI
-} catch {
-  // Package not installed
-}
+let geminiClient: GoogleGenerativeAI | null = null
 
-let geminiClient: any = null
-
-export function createGeminiClient(apiKey: string): any {
-  if (!GoogleGenerativeAI) {
-    throw new Error("@google/generative-ai package not installed. Run: npm install @google/generative-ai")
-  }
+export function createGeminiClient(apiKey: string): GoogleGenerativeAI {
   if (!geminiClient) {
     geminiClient = new GoogleGenerativeAI(apiKey)
   }

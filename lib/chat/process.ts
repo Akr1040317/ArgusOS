@@ -1,4 +1,5 @@
-import { chatCompletion } from "@/lib/ai/client"
+import { unifiedChatCompletion } from "@/lib/ai/unifiedClient"
+import { AIFeature } from "@/lib/ai/providers/types"
 import { loadPrompt } from "@/lib/ai/prompts"
 import { RetrievedThread, RetrievedEvent } from "./retrieval"
 

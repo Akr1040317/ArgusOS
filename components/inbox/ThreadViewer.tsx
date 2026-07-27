@@ -288,7 +288,7 @@ export function ThreadViewer({ threadId }: { threadId: string | null }) {
         >
           Summary
         </button>
-        {(thread.extractedAsk || thread.tasks?.length > 0 || thread.deadlines?.length > 0) && (
+        {(thread.extractedAsk || (thread.tasks?.length ?? 0) > 0 || (thread.deadlines?.length ?? 0) > 0) && (
           <button
             onClick={() => setActiveTab("ask-actions")}
             className={cn(
